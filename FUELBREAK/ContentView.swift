@@ -38,14 +38,14 @@ struct ContentView: View {
                 Label("Wildfire Map", systemImage: "flame.fill")
             }
             
-            // ── Tab 4: Wildfire + Forestry Map ───────────────────
+            // ── Tab 4: TTTS Management Tool Testing ───────────────────
             ForestryWebView(
-                url: URL(string: "\(TTTS_BASE_URL)/Display_Maps/index.html")!,
+                url: URL(string: "\(TTTS_BASE_URL)/index.html")!,
                 coordinator: coordinator
             )
             .ignoresSafeArea()
             .tabItem {
-                Label("Wildfire Map", systemImage: "person.fill")
+                Label("Twin Timbers Trees", systemImage: "person.fill")
             }
 
         }
