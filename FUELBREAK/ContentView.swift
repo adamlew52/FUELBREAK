@@ -1,66 +1,43 @@
-//
-//  ContentView.swift
-//  FUELBREAK
-//
-//  Created by alew on 3/28/26.
-//
-
 import SwiftUI
-import SwiftData
+private let BASE_URL = "https://www.sensaro.net/Mobile/Forestry_Dashboard"
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    // Keep one coordinator alive for the whole app lifetime
+    @StateObject private var coordinator = AppCoordinator()
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        TabView {
+            // ── Tab 1: Report a Concern ──────────────────────────
+            ForestryWebView(
+                url: URL(string: "\(BASE_URL)/dashboard.html")!,
+                coordinator: coordinator
+            )
+            .ignoresSafeArea()
+            .tabItem {
+                Label("Report", systemImage: "camera.fill")
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+
+            // ── Tab 2: Forestry-only Map ─────────────────────────
+            ForestryWebView(
+                url: URL(string: "\(BASE_URL)/Display_Maps/Forestry/index.html")!,
+                coordinator: coordinator
+            )
+            .ignoresSafeArea()
+            .tabItem {
+                Label("Forestry Map", systemImage: "leaf.fill")
             }
-        } detail: {
-            Text("Select an item")
-        }
-    }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+            // ── Tab 3: Wildfire + Forestry Map ───────────────────
+            ForestryWebView(
+                url: URL(string: "\(BASE_URL)/Display_Maps/index.html")!,
+                coordinator: coordinator
+            )
+            .ignoresSafeArea()
+            .tabItem {
+                Label("Wildfire Map", systemImage: "flame.fill")
             }
         }
+        // Forest green accent to match your existing dark-green theme
+        .tint(Color(red: 0.19, green: 0.44, blue: 0.31))
     }
-}
-
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
