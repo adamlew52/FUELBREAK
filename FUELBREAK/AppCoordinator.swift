@@ -52,7 +52,7 @@ extension AppCoordinator: WKNavigationDelegate {
             <h2>Could not load page</h2>
             <p>\(error.localizedDescription)</p>
             <p style='font-size:.85rem;opacity:.6;'>
-                Make sure your device is online and BASE_URL is set correctly.</p>
+                Make sure your device is online; this tool provides live data and if we allowed offline use you might get inaccurate/outdated calculations. We hope you understand. </p>
         </body></html>
         """
         webView.loadHTMLString(html, baseURL: nil)

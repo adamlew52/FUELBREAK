@@ -39,14 +39,14 @@ struct ContentView: View {
             }
             
             // ── Tab 4: TTTS Management Tool Testing ───────────────────
-            ForestryWebView(
-                url: URL(string: "\(TTTS_BASE_URL)/index.html")!,
-                coordinator: coordinator
-            )
-            .ignoresSafeArea()
-            .tabItem {
-                Label("Twin Timbers Trees", systemImage: "person.fill")
-            }
+            //ForestryWebView(
+            //    url: URL(string: "\(TTTS_BASE_URL)/index.html")!,
+            //    coordinator: coordinator
+            //)
+            //.ignoresSafeArea()
+            //.tabItem {
+            //    Label("Twin Timbers Trees", systemImage: "person.fill")
+            //}
 
         }
         // Forest green accent to match your existing dark-green theme
