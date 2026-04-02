@@ -1,6 +1,6 @@
 import SwiftUI
 private let BASE_URL = "https://www.sensaro.net/Mobile/Forestry_Dashboard"
-private let TTTS_BASE_URL = "https://www.sensaro.net/Mobile/TTTS"
+private let TTTS_BASE_URL = "https://www.sensaro.net/Mobile/TTTS" //just for testing some
 
 struct ContentView: View {
     // Keep one coordinator alive for the whole app lifetime
@@ -15,7 +15,7 @@ struct ContentView: View {
             )
             .ignoresSafeArea()
             .tabItem {
-                Label("Report", systemImage: "camera.fill")
+                Label("Dashboard", systemImage: "camera.fill")
             }
 
             // ── Tab 2: Forestry-only Map ─────────────────────────
@@ -36,6 +36,25 @@ struct ContentView: View {
             .ignoresSafeArea()
             .tabItem {
                 Label("Wildfire Map", systemImage: "flame.fill")
+            }
+            
+            // ── Tab 4: User/Account ───────────────────
+            ForestryWebView(
+                url: URL(string: "\(BASE_URL)/user.html")!,
+                coordinator: coordinator
+            )
+            .ignoresSafeArea()
+            .tabItem {
+                Label("Account", systemImage: "person.fill")
+            }
+            
+            // ── Temp Test Tab ─────────────────────────────────────────────
+            Button("Fire Test Notification") {
+                scheduleTestNotification()
+            }
+            .padding()
+            .tabItem {
+                Label("Test", systemImage: "bell.fill")
             }
             
             // ── Tab 4: TTTS Management Tool Testing ───────────────────

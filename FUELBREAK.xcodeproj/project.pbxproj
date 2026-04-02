@@ -39,14 +39,14 @@
 /* Begin PBXCopyFilesBuildPhase section */
 		7A0248FC2F7C7E3800C56187 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
+			buildActionMask = 8;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
 				7A0248FB2F7C7E3800C56187 /* FUELBREAK_NOTIFS.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
+			runOnlyForDeploymentPostprocessing = 1;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -596,7 +596,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = SENSARO.FUELBREAK;
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "-";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=*]" = SENSARO.FUELBREAK;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -640,7 +640,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = SENSARO.FUELBREAK;
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "-";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = SENSARO.FUELBREAK;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
