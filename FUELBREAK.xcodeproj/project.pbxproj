@@ -78,6 +78,13 @@
 			);
 			target = 7A0248EB2F7C7E3800C56187 /* FUELBREAK_NOTIFS */;
 		};
+		7AB763D62F808036005978D9 /* Exceptions for "FUELBREAK" folder in "FUELBREAK" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7A6C39522F78A69E00F702BF /* FUELBREAK */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -92,6 +99,9 @@
 		};
 		7A6C39552F78A69E00F702BF /* FUELBREAK */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7AB763D62F808036005978D9 /* Exceptions for "FUELBREAK" folder in "FUELBREAK" target */,
+			);
 			path = FUELBREAK;
 			sourceTree = "<group>";
 		};
@@ -584,6 +594,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FUELBREAK/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -631,6 +642,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FUELBREAK/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
