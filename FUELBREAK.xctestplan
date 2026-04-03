@@ -1,0 +1,37 @@
+{
+  "configurations" : [
+    {
+      "id" : "0CDB2A61-D0C7-4A2E-8067-68F651F359BF",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:FUELBREAK.xcodeproj",
+      "identifier" : "7A6C39522F78A69E00F702BF",
+      "name" : "FUELBREAK"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:FUELBREAK.xcodeproj",
+        "identifier" : "7A6C39622F78A6A200F702BF",
+        "name" : "FUELBREAKTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:FUELBREAK.xcodeproj",
+        "identifier" : "7A6C396C2F78A6A200F702BF",
+        "name" : "FUELBREAKUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

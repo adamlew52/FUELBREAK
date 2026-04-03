@@ -1,19 +1,40 @@
 import UIKit
 import UserNotifications
 
-class AppDelegate: NSObject, UIApplicationDelegate {
-    
+// Add UNUserNotificationCenterDelegate conformance
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+
+    // Add this to your existing didFinishLaunchingWithOptions or applicationDidBecomeActive:
     func application(_ application: UIApplication,
-                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        let token = deviceToken.map { String(format: "%02x", $0) }.joined()
-        print("APNs token: \(token)")
-        // TODO: Send `token` to your server at sensaro.net
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
     }
-    
-    func application(_ application: UIApplication,
-                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("APNs registration failed: \(error)")
+
+    // This fires when the user TAPS a notification
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                 didReceive response: UNNotificationResponse,
+                                 withCompletionHandler completionHandler: @escaping () -> Void) {
+        let info   = response.notification.request.content.userInfo
+        let tab    = info["tab"]    as? String ?? "wildfire"
+        let target = info["target"] as? String ?? "panel-alerts"
+
+        // Small delay so the app has time to foreground and the webview loads
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            // Post through NotificationCenter so ContentView picks it up
+            NotificationCenter.default.post(
+                name: .navigateToTarget,
+                object: nil,
+                userInfo: ["tab": tab, "target": target]
+            )
+        }
+        completionHandler()
     }
+}
+
+// Add this extension anywhere
+extension Notification.Name {
+    static let navigateToTarget = Notification.Name("navigateToTarget")
 }
 
 // Call this from anywhere to fire a test notification in 5 seconds

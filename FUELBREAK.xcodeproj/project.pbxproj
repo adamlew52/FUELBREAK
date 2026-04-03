@@ -57,6 +57,7 @@
 		7A6C39532F78A69E00F702BF /* FUELBREAK.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FUELBREAK.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A6C39632F78A6A200F702BF /* FUELBREAKTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FUELBREAKTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A6C396D2F78A6A200F702BF /* FUELBREAKUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FUELBREAKUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7AAC31292F803E0700A58AF6 /* FUELBREAK.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = FUELBREAK.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -152,6 +153,7 @@
 		7A6C394A2F78A69E00F702BF = {
 			isa = PBXGroup;
 			children = (
+				7AAC31292F803E0700A58AF6 /* FUELBREAK.xctestplan */,
 				7A6C39552F78A69E00F702BF /* FUELBREAK */,
 				7A6C39662F78A6A200F702BF /* FUELBREAKTests */,
 				7A6C39702F78A6A200F702BF /* FUELBREAKUITests */,
@@ -562,6 +564,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;

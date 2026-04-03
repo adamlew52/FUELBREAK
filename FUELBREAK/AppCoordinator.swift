@@ -6,12 +6,26 @@ import UIKit
 /// ObservableObject so ContentView can hold it with @StateObject.
 /// Implements all the WKWebView delegate protocols and bridges
 /// camera, photo library, geolocation, and JS dialogs to native iOS.
+
+
 final class AppCoordinator: NSObject, ObservableObject {
+    @Published var pendingTarget: (tab: String, elementId: String)? = nil
+    
+    
+    func navigateTo(tab: String, elementId: String) {
+        pendingTarget = (tab, elementId)
+        let js = """
+            document.getElementById('\(elementId)')?.scrollIntoView({behavior:'smooth'});
+            document.getElementById('\(elementId)')?.click();
+        """
+        webViews[tab]?.view.evaluateJavaScript(js, completionHandler: nil)
+    }
 
     // ── Active WebViews ──────────────────────────────────────────
     // We track every WKWebView that registers so geolocation
     // callbacks reach the correct one.
-    private var webViews: [WKWebView] = []
+    private var webViews: [String: (view: WKWebView, url: URL)] = [:]
+
 
     // ── Location ─────────────────────────────────────────────────
     private let locationManager = CLLocationManager()
@@ -29,10 +43,13 @@ final class AppCoordinator: NSObject, ObservableObject {
     }
 
     /// Called by each ForestryWebView after it creates a WKWebView.
-    func register(webView: WKWebView) {
-        if !webViews.contains(webView) {
-            webViews.append(webView)
-        }
+    func register(webView: WKWebView, url: URL, key: String) {
+        webViews[key] = (view: webView, url: url)
+    }
+    
+    func reloadTab(_ key: String) {
+        guard let entry = webViews[key] else { return }
+        entry.view.load(URLRequest(url: entry.url))
     }
 }
 
