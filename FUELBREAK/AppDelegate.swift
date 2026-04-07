@@ -6,7 +6,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        // Request permission and register for remote notifications
         UNUserNotificationCenter.current()
             .requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
                 guard granted else { return }
@@ -14,6 +13,17 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             }
+
+        // ── Fix top safe area white flash ─────────────────────────
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let tabBarController = windowScene.windows.first?.rootViewController as? UITabBarController {
+                tabBarController.view.backgroundColor = UIColor(red: 0.96, green: 0.61, blue: 0.04, alpha: 1.0)
+                print(windowScene.windows.first?.rootViewController as Any)
+            }
+        }
+        
+
         return true
     }
 
@@ -51,19 +61,4 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 // ── Notification name used by ContentView's onReceive ─────────────
 extension Notification.Name {
     static let navigateToTarget = Notification.Name("navigateToTarget")
-}
-
-// ── Local test notification (delete before shipping) ──────────────
-func scheduleTestNotification() {
-    let content = UNMutableNotificationContent()
-    content.title = "Wildfire Alert"
-    content.body  = "New activity near your area."
-    content.sound = .default
-    content.badge = 1
-
-    let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-    let request = UNNotificationRequest(identifier: UUID().uuidString,
-                                        content: content,
-                                        trigger: trigger)
-    UNUserNotificationCenter.current().add(request)
 }

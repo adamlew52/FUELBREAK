@@ -2,8 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UILaunchScreens</key>
+	<dict>
+		<key>UIImageName</key>
+		<string></string>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>FUELBREAK uses your location in the background to alert you to nearby fire activity.</string>
+	<key>UILaunchStoryboardName</key>
+	<string>Assets.xcassets</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>FUELBREAK uses your location to show you nearby wildfire and forestry activity.</string>
 	<key>CFBundleIconFile</key>

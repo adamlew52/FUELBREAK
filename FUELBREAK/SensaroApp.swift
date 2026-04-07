@@ -30,7 +30,7 @@ struct SensaroApp: App {
         // 1. Tab Bar Appearance
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 0.19, green: 0.39, blue: 0.19, alpha: 1.0)
+        appearance.backgroundColor = UIColor(red: 0.96, green: 0.61, blue: 0.04, alpha: 1.0)
         
         appearance.stackedLayoutAppearance.selected.iconColor = UIColor(red: 0.19, green: 0.44, blue: 0.31, alpha: 1.0)
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
@@ -48,7 +48,7 @@ struct SensaroApp: App {
         DispatchQueue.main.async {
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
                 for window in windowScene.windows {
-                    window.backgroundColor = UIColor(red: 0.84, green: 0.8, blue: 0.0, alpha: 1.0)
+                    window.backgroundColor = UIColor(red: 0.5, green: 0.75, blue: 0.16, alpha: 1.0)
                 }
             }
         }
