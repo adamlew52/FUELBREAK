@@ -13,6 +13,7 @@ struct ForestryWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        
 
         // ── Allow inline camera preview / video ──────────────────
         config.allowsInlineMediaPlayback = true
@@ -32,6 +33,9 @@ struct ForestryWebView: UIViewRepresentable {
 
 
         let webView = WKWebView(frame: .zero, configuration: config)
+        webView.isOpaque = false
+        webView.backgroundColor = UIColor(red: 0.0, green: 0.20, blue: 0.0, alpha: 1.0)   // or UIColor(red: 0.84, green: 0.2, blue: 0.0, alpha: 1.0)
+
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate          = context.coordinator
 
@@ -48,6 +52,7 @@ struct ForestryWebView: UIViewRepresentable {
         webView.load(URLRequest(url: url))
         return webView
     }
+    
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 

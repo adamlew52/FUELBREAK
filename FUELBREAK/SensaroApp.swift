@@ -25,26 +25,32 @@ struct SensaroApp: App {
                 }
             }
     }
+    
     private func configureTabBar() {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            
-            // Background colour (your green)
-            appearance.backgroundColor = UIColor(red: 0.15, green: 1.00, blue: 0.42, alpha: 1.0)
-            
-            // Selected item colour (your dark green)
-            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(red: 0.19, green: 0.44, blue: 0.31, alpha: 1.0)
-            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-                .foregroundColor: UIColor(red: 0.19, green: 0.44, blue: 0.31, alpha: 1.0)
-            ]
-            
-            // Unselected item colour (dark grey)
-            appearance.stackedLayoutAppearance.normal.iconColor = .darkGray
-            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-                .foregroundColor: UIColor.darkGray
-            ]
-            
-            UITabBar.appearance().standardAppearance = appearance
-            UITabBar.appearance().scrollEdgeAppearance = appearance
+        // 1. Tab Bar Appearance
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(red: 0.19, green: 0.39, blue: 0.19, alpha: 1.0)
+        
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(red: 0.19, green: 0.44, blue: 0.31, alpha: 1.0)
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: UIColor(red: 0.19, green: 0.44, blue: 0.31, alpha: 1.0)
+        ]
+        appearance.stackedLayoutAppearance.normal.iconColor = .darkGray
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.darkGray
+        ]
+        
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+        
+        // 2. Top Margin (Window Background) Colour
+        DispatchQueue.main.async {
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                for window in windowScene.windows {
+                    window.backgroundColor = UIColor(red: 0.84, green: 0.8, blue: 0.0, alpha: 1.0)
+                }
+            }
         }
+    }
 }

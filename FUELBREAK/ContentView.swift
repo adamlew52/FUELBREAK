@@ -62,7 +62,7 @@ struct ContentView: View {
         ///.ignoresSafeArea()
         //.toolbarBackground(.visible, for: .tabBar)                // Show tab bar background
         //.toolbarColorScheme(.dark, for: .tabBar)                 // Force light/dark appearance
-        //.tint(Color(red: 0.19, green: 0.44, blue: 0.31))
+        .tint(Color(red: 0.19, green: 0.44, blue: 0.31))
         //.toolbarBackground(Color(red: 0.15, green: 1.00, blue: 0.42), for: .tabBar) // Custom background
         
         //configureTabBar()
