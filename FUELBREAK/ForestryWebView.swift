@@ -26,12 +26,18 @@ struct ForestryWebView: UIViewRepresentable {
                          injectionTime: .atDocumentStart,
                          forMainFrameOnly: false)
         )
+        config.userContentController.addUserScript(
+            WKUserScript(source: noZoomJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        )
+
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate          = context.coordinator
 
         webView.scrollView.contentInsetAdjustmentBehavior = .scrollableAxes
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
+        webView.scrollView.isScrollEnabled = true // keep scrolling, just no zoom
 
         if #available(iOS 16.4, *) { webView.isInspectable = true }
 
@@ -79,6 +85,14 @@ struct ForestryWebView: UIViewRepresentable {
             if (!window.__geo_error) return;
             window.__geo_error({ code: code, message: msg });
         };
+    })();
+    """
+    
+    let noZoomJS = """
+    (function() {
+        var m = document.querySelector('meta[name=viewport]');
+        if (!m) { m = document.createElement('meta'); m.name='viewport'; document.head.appendChild(m); }
+        m.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
     })();
     """
 }
