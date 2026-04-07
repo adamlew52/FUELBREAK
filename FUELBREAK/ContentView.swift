@@ -9,6 +9,30 @@ private enum Tab {
     static let account   = 3
 }
 
+private func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        
+        // 👇 Tab bar background colour
+        appearance.backgroundColor = UIColor(red: 0.15, green: 1.00, blue: 0.42, alpha: 1.0)
+        
+        // Selected item
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(red: 0.19, green: 0.44, blue: 0.31, alpha: 1.0)
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: UIColor(red: 0.19, green: 0.44, blue: 0.31, alpha: 1.0)
+        ]
+        
+        // Unselected item
+        appearance.stackedLayoutAppearance.normal.iconColor = .darkGray
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.darkGray
+        ]
+        
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+
+
 struct ContentView: View {
 
     @StateObject private var coordinator = AppCoordinator()
@@ -57,12 +81,15 @@ struct ContentView: View {
             .tabItem { Label("Account", systemImage: "person.fill") }
         }
         // ── Applied to the TabView, not to children ──────────────
-        .ignoresSafeArea()
-        .tint(Color(red: 0.19, green: 0.44, blue: 0.31))
-        .toolbarBackground(.visible, for: .tabBar)                // Show tab bar background
-        .toolbarBackground(Color(red: 0.15, green: 1.00, blue: 0.42), for: .tabBar) // Custom background
-        .toolbarColorScheme(.dark, for: .tabBar)                 // Force light/dark appearance
+        ///.ignoresSafeArea()
+        ///.tint(Color(red: 0.19, green: 0.44, blue: 0.31))
+        ///.toolbarBackground(.visible, for: .tabBar)                // Show tab bar background
+        ///.toolbarBackground(Color(red: 0.15, green: 1.00, blue: 0.42), for: .tabBar) // Custom background
+        ///.toolbarColorScheme(.dark, for: .tabBar)                 // Force light/dark appearance
+        
+        configureTabBarAppearance()
 
+        
         .onChange(of: selectedTab) {
             if let key = keyMap[selectedTab] {
                 coordinator.reloadTab(key)
