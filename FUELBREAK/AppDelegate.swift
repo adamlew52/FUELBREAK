@@ -13,6 +13,20 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             }
+        
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+
+        // ── Kill the white UIHostingController flash ──────────────
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            window.rootViewController?.view.backgroundColor = UIColor(red: 0.96, green: 0.61, blue: 0.04, alpha: 1.0)
+        }
+
+        // ... rest of your existing code
+        return true
+    }
 
         // ── Fix top safe area white flash ─────────────────────────
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
