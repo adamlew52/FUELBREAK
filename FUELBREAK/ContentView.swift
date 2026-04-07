@@ -59,6 +59,10 @@ struct ContentView: View {
         // ── Applied to the TabView, not to children ──────────────
         .ignoresSafeArea()
         .tint(Color(red: 0.19, green: 0.44, blue: 0.31))
+        .toolbarBackground(.visible, for: .tabBar)                // Show tab bar background
+        .toolbarBackground(Color(red: 0.15, green: 1.00, blue: 0.42), for: .tabBar) // Custom background
+        .toolbarColorScheme(.dark, for: .tabBar)                 // Force light/dark appearance
+
         .onChange(of: selectedTab) {
             if let key = keyMap[selectedTab] {
                 coordinator.reloadTab(key)
