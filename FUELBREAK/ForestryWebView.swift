@@ -2,7 +2,7 @@ import SwiftUI
 import WebKit
 
 // Use the endpoint from your Lambda
-private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod/fuelbreak-notify"
+private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/dev/fuelbreak-notify"
 
 struct ForestryWebView: UIViewRepresentable {
     let url: URL
