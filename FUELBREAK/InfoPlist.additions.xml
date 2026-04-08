@@ -26,8 +26,22 @@
 
 <plist version="1.0">
 <dict>
-    <key>CFBundleIconName</key>
-    <string>Assets.xcassets</string>
+    <<key>CFBundleIcons</key>
+    <dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconName</key>
+            <string>AppIcon</string>
+        </dict>
+    </dict>
+    <key>CFBundleIcons~ipad</key>
+    <dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconName</key>
+            <string>AppIcon</string>
+        </dict>
+    </dict>
     
     <key>CFBundleIdentifier</key>
     <string>/Users/alew/Desktop/CREWBOSS/CREWBOSS/WATCH-CREWBOSS Watch App/Assets.xcassets</string>

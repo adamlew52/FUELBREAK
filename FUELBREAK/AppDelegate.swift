@@ -36,9 +36,23 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
-        print("APNs token: \(token)")
+        print("✅ APNs token received: \(token)")
         UserDefaults.standard.set(token, forKey: "apns_device_token")
+        
+        // Also post a local notification to visually confirm (optional)
+        let content = UNMutableNotificationContent()
+        content.title = "APNs Token"
+        content.body = "Token received: \(token.prefix(20))..."
+        let request = UNNotificationRequest(identifier: "token_debug", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+        
+        NotificationCenter.default.post(name: .deviceTokenReceived, object: nil, userInfo: ["token": token])
+        func application(_ application: UIApplication,
+                         didFailToRegisterForRemoteNotificationsWithError error: Error) {
+            print("❌ APNs registration failed: \(error)")
+        }
     }
+    
 
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
@@ -67,4 +81,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 // ── Notification name used by ContentView's onReceive ─────────────
 extension Notification.Name {
     static let navigateToTarget = Notification.Name("navigateToTarget")
+}
+
+extension Notification.Name {
+    static let deviceTokenReceived = Notification.Name("deviceTokenReceived")
 }

@@ -41,6 +41,19 @@ final class AppCoordinator: NSObject, ObservableObject {
         locationManager.delegate        = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
+    
+    func updateDeviceToken(_ token: String) {
+        // If webViews is a dictionary: [String: (view: WKWebView, url: URL)]
+        for (_, webViewInfo) in webViews {
+            webViewInfo.view.evaluateJavaScript("window.CrewBoss.setToken('\(token)')") { _, error in
+                if let error = error {
+                    print("Failed to update token in webView: \(error)")
+                } else {
+                    print("Token updated in webView")
+                }
+            }
+        }
+    }
 
     /// Called by each ForestryWebView after it creates a WKWebView.
     func register(webView: WKWebView, url: URL, key: String) {

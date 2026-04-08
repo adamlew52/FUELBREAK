@@ -8,8 +8,22 @@
 	<string>Used to select photos for upload.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Used to save photos to your library.</string>
-	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
+    <key>CFBundleIcons</key>
+    <dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconName</key>
+            <string>AppIcon</string>
+        </dict>
+    </dict>
+    <key>CFBundleIcons~ipad</key>
+    <dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconName</key>
+            <string>AppIcon</string>
+        </dict>
+    </dict>
 	<key>UIUserInterfaceStyle</key>
 	<string>Light</string>
 	<key>UILaunchScreen</key>

@@ -2,7 +2,7 @@ import SwiftUI
 import WebKit
 
 // Use the endpoint from your Lambda
-private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/dev/fuelbreak-notify"
+private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod/fuelbreak-notify"
 
 struct ForestryWebView: UIViewRepresentable {
     let url: URL
@@ -40,31 +40,37 @@ struct ForestryWebView: UIViewRepresentable {
             window.__apns_device_token = "\(savedToken)";
             window.__apns_api_url      = "\(API_GATEWAY_URL)";
 
-            window.CrewBoss = {
+            window.fuelbreak = {
                 // Call this from Swift when the real token arrives
                 setToken: function(token) {
                     window.__apns_device_token = token;
-                    console.log('[CrewBoss] token updated to: ' + token);
+                    console.log('[fuelbreak] token updated to: ' + token);
                 },
                 // Call this after login (from your web JS)
                 registerToken: function (userId) {
+                    console.log('[fuelbreak] registerToken called for userId:', userId);
                     var token = window.__apns_device_token;
+                    console.log('[fuelbreak] current token length:', token ? token.length : 0);
                     if (!token || token.length === 0) {
-                        console.warn('[CrewBoss] no token yet');
+                        console.warn('[fuelbreak] aborting – no token');
                         return;
                     }
+                    console.log('[fuelbreak] Fetching to:', window.__apns_api_url);
                     fetch(window.__apns_api_url, {
-                        method:  'POST',
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            action:       'register',
-                            user_id:      String(userId),
+                            action: 'register',
+                            user_id: String(userId),
                             device_token: token
                         })
                     }).then(function(r) {
-                        console.log('[CrewBoss] token registered, status:', r.status);
+                        console.log('[fuelbreak] fetch status:', r.status);
+                        return r.text();
+                    }).then(function(t) {
+                        console.log('[fuelbreak] response body:', t);
                     }).catch(function(err) {
-                        console.warn('[CrewBoss] registerToken failed:', err);
+                        console.warn('[fuelbreak] fetch error:', err);
                     });
                 }
             };
@@ -75,6 +81,7 @@ struct ForestryWebView: UIViewRepresentable {
                          injectionTime: .atDocumentStart,
                          forMainFrameOnly: false)
         )
+        
 
         // ── 3. JS console → Xcode console (debugging) ───────────────
         config.userContentController.add(context.coordinator, name: "xcodelogdebug")
@@ -106,6 +113,12 @@ struct ForestryWebView: UIViewRepresentable {
 
         context.coordinator.register(webView: webView, url: url, key: key)
         webView.load(URLRequest(url: url))
+        // Wait 5 seconds, then print what token the web view currently has
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            webView.evaluateJavaScript("window.__apns_device_token || 'NO_TOKEN'") { result, error in
+                print("🔍 WebView token after 5s: \(result ?? "nil") error: \(error?.localizedDescription ?? "none")")
+            }
+        }
 
         return webView
     }
@@ -116,7 +129,7 @@ struct ForestryWebView: UIViewRepresentable {
     private let locationBridgeJS = """
     (function () {
         window.__geo_success = null;
-        window.__geo_error   = null;
+        window.__geo_error   = null;r
 
         const _orig = navigator.geolocation.getCurrentPosition
             .bind(navigator.geolocation);
