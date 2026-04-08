@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-// Use the endpoint from your first script – change if you need a different path
+// Use the endpoint from your Lambda
 private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod/fuelbreak-notify"
 
 struct ForestryWebView: UIViewRepresentable {
@@ -31,15 +31,18 @@ struct ForestryWebView: UIViewRepresentable {
                          forMainFrameOnly: true)
         )
 
-        // ── 2. NEW: APNs token bridge ───────────────────────────────────
+        // ── 2. APNs token bridge with automatic registration ──────────────
         let savedToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
+        let savedUserId = UserDefaults.standard.string(forKey: "current_user_id") ?? ""  // Store this after login
+
         let tokenBridgeJS = """
         (function () {
             window.__apns_device_token = "\(savedToken)";
             window.__apns_api_url      = "\(API_GATEWAY_URL)";
+            window.__current_user_id   = "\(savedUserId)";
 
             window.CrewBoss = {
-                // Call this after login: CrewBoss.registerToken(userId)
+                // Call this manually if needed: CrewBoss.registerToken(userId)
                 registerToken: function (userId) {
                     var token = window.__apns_device_token;
                     if (!token || token.length === 0) return;
@@ -58,6 +61,11 @@ struct ForestryWebView: UIViewRepresentable {
                     });
                 }
             };
+
+            // Automatically register on every page load if we have a user ID
+            if (window.__current_user_id && window.__apns_device_token) {
+                window.CrewBoss.registerToken(window.__current_user_id);
+            }
         })();
         """
         config.userContentController.addUserScript(
@@ -66,7 +74,7 @@ struct ForestryWebView: UIViewRepresentable {
                          forMainFrameOnly: false)
         )
 
-        // ── 3. NEW: JS console → Xcode console (debugging) ───────────────
+        // ── 3. JS console → Xcode console (debugging) ───────────────
         config.userContentController.add(context.coordinator, name: "xcodelogdebug")
         config.userContentController.addUserScript(
             WKUserScript(source: """
@@ -95,15 +103,6 @@ struct ForestryWebView: UIViewRepresentable {
 
         context.coordinator.register(webView: webView, url: url, key: key)
         webView.load(URLRequest(url: url))
-
-        // ── 4. TEMPORARY TEST: call CrewBoss.registerToken (remove later) ─
-        webView.evaluateJavaScript("""
-            if (window.CrewBoss) {
-                window.CrewBoss.registerToken('test-user-123');
-            } else {
-                console.log('CrewBoss not found on this page');
-            }
-        """)
 
         return webView
     }
