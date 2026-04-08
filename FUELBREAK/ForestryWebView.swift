@@ -39,10 +39,8 @@ struct ForestryWebView: UIViewRepresentable {
         (function () {
             window.__apns_device_token = "\(savedToken)";
             window.__apns_api_url      = "\(API_GATEWAY_URL)";
-            window.__current_user_id   = "\(savedUserId)";
 
             window.CrewBoss = {
-                // Call this manually if needed: CrewBoss.registerToken(userId)
                 registerToken: function (userId) {
                     var token = window.__apns_device_token;
                     if (!token || token.length === 0) return;
@@ -62,9 +60,10 @@ struct ForestryWebView: UIViewRepresentable {
                 }
             };
 
-            // Automatically register on every page load if we have a user ID
-            if (window.__current_user_id && window.__apns_device_token) {
-                window.CrewBoss.registerToken(window.__current_user_id);
+            // Check localStorage for a user ID saved by the web app
+            var storedUserId = localStorage.getItem('sensaro_user_id');
+            if (storedUserId && window.__apns_device_token) {
+                window.CrewBoss.registerToken(storedUserId);
             }
         })();
         """
