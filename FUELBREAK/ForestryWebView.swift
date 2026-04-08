@@ -1,62 +1,116 @@
 import SwiftUI
 import WebKit
 
-/// Wraps WKWebView so it can be used in SwiftUI.
-/// Each tab gets its own WebView instance but shares one AppCoordinator
-/// (so there's only one CLLocationManager and one image picker active at a time).
+// Use the endpoint from your first script – change if you need a different path
+private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod/fuelbreak-notify"
+
 struct ForestryWebView: UIViewRepresentable {
     let url: URL
-    let key: String          // Unique name for this tab e.g. "dashboard", "account"
+    let key: String          // Unique tab identifier
     let coordinator: AppCoordinator
 
     func makeCoordinator() -> AppCoordinator { coordinator }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        
 
-        // ── Allow inline camera preview / video ──────────────────
+        // ── 1. Existing: inline media, geolocation, no‑zoom ──────────────
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
-        // ── Geolocation bridge ───────────────────────────────────
-        config.userContentController.add(context.coordinator,
-                                         name: "locationRequest")
+        // Geolocation bridge
+        config.userContentController.add(context.coordinator, name: "locationRequest")
         config.userContentController.addUserScript(
             WKUserScript(source: locationBridgeJS,
                          injectionTime: .atDocumentStart,
                          forMainFrameOnly: false)
         )
         config.userContentController.addUserScript(
-            WKUserScript(source: noZoomJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+            WKUserScript(source: noZoomJS,
+                         injectionTime: .atDocumentEnd,
+                         forMainFrameOnly: true)
         )
 
+        // ── 2. NEW: APNs token bridge ───────────────────────────────────
+        let savedToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
+        let tokenBridgeJS = """
+        (function () {
+            window.__apns_device_token = "\(savedToken)";
+            window.__apns_api_url      = "\(API_GATEWAY_URL)";
 
+            window.CrewBoss = {
+                // Call this after login: CrewBoss.registerToken(userId)
+                registerToken: function (userId) {
+                    var token = window.__apns_device_token;
+                    if (!token || token.length === 0) return;
+                    fetch(window.__apns_api_url, {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action:       'register',
+                            user_id:      String(userId),
+                            device_token: token
+                        })
+                    }).then(function(r) {
+                        console.log('[CrewBoss] token registered, status:', r.status);
+                    }).catch(function(err) {
+                        console.warn('[CrewBoss] registerToken failed:', err);
+                    });
+                }
+            };
+        })();
+        """
+        config.userContentController.addUserScript(
+            WKUserScript(source: tokenBridgeJS,
+                         injectionTime: .atDocumentStart,
+                         forMainFrameOnly: false)
+        )
+
+        // ── 3. NEW: JS console → Xcode console (debugging) ───────────────
+        config.userContentController.add(context.coordinator, name: "xcodelogdebug")
+        config.userContentController.addUserScript(
+            WKUserScript(source: """
+            (function () {
+                var _log = console.log.bind(console);
+                console.log = function () {
+                    var msg = Array.from(arguments).join(' ');
+                    window.webkit.messageHandlers.xcodelogdebug.postMessage(msg);
+                    _log.apply(console, arguments);
+                };
+            })();
+            """, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        )
+
+        // ── Create and configure the WebView ─────────────────────────────
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
-        webView.backgroundColor = UIColor(red: 0.0, green: 0.20, blue: 0.0, alpha: 1.0)   // or UIColor(red: 0.84, green: 0.2, blue: 0.0, alpha: 1.0)
-
+        webView.backgroundColor = UIColor(red: 0.0, green: 0.20, blue: 0.0, alpha: 1.0)
         webView.navigationDelegate = context.coordinator
-        webView.uiDelegate          = context.coordinator
-
+        webView.uiDelegate = context.coordinator
         webView.scrollView.contentInsetAdjustmentBehavior = .scrollableAxes
         webView.scrollView.pinchGestureRecognizer?.isEnabled = false
-        webView.scrollView.isScrollEnabled = true // keep scrolling, just no zoom
+        webView.scrollView.isScrollEnabled = true
 
         if #available(iOS 16.4, *) { webView.isInspectable = true }
 
-        // Register with both the key and the original URL so the
-        // coordinator can reload it by name later
         context.coordinator.register(webView: webView, url: url, key: key)
-
         webView.load(URLRequest(url: url))
+
+        // ── 4. TEMPORARY TEST: call CrewBoss.registerToken (remove later) ─
+        webView.evaluateJavaScript("""
+            if (window.CrewBoss) {
+                window.CrewBoss.registerToken('test-user-123');
+            } else {
+                console.log('CrewBoss not found on this page');
+            }
+        """)
+
         return webView
     }
-    
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    // ── JS injected before page load ─────────────────────────────
+    // ── Existing JS bridges (unchanged) ─────────────────────────────────
     private let locationBridgeJS = """
     (function () {
         window.__geo_success = null;
@@ -92,8 +146,8 @@ struct ForestryWebView: UIViewRepresentable {
         };
     })();
     """
-    
-    let noZoomJS = """
+
+    private let noZoomJS = """
     (function() {
         var m = document.querySelector('meta[name=viewport]');
         if (!m) { m = document.createElement('meta'); m.name='viewport'; document.head.appendChild(m); }
