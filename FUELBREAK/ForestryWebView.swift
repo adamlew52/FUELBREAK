@@ -88,6 +88,7 @@ struct ForestryWebView: UIViewRepresentable {
             })();
             """, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         )
+        config.userContentController.add(context.coordinator, name: "setUserId")
 
         // ── Create and configure the WebView ─────────────────────────────
         let webView = WKWebView(frame: .zero, configuration: config)

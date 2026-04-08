@@ -161,6 +161,12 @@ extension AppCoordinator: WKScriptMessageHandler {
 
     func userContentController(_ userContentController: WKUserContentController,
                                didReceive message: WKScriptMessage) {
+        if message.name == "setUserId", let userId = message.body as? String {
+                UserDefaults.standard.set(userId, forKey: "current_user_id")
+                print("[Native] User ID saved: \(userId)")
+                // Optionally trigger immediate registration
+                message.webView?.evaluateJavaScript("window.CrewBoss.registerToken('\(userId)')")
+            }
         guard message.name == "locationRequest" else { return }
         // Remember which WebView asked
         locationRequester = message.webView
