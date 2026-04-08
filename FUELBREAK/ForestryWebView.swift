@@ -41,9 +41,18 @@ struct ForestryWebView: UIViewRepresentable {
             window.__apns_api_url      = "\(API_GATEWAY_URL)";
 
             window.CrewBoss = {
+                // Call this from Swift when the real token arrives
+                setToken: function(token) {
+                    window.__apns_device_token = token;
+                    console.log('[CrewBoss] token updated to: ' + token);
+                },
+                // Call this after login (from your web JS)
                 registerToken: function (userId) {
                     var token = window.__apns_device_token;
-                    if (!token || token.length === 0) return;
+                    if (!token || token.length === 0) {
+                        console.warn('[CrewBoss] no token yet');
+                        return;
+                    }
                     fetch(window.__apns_api_url, {
                         method:  'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -59,12 +68,6 @@ struct ForestryWebView: UIViewRepresentable {
                     });
                 }
             };
-
-            // Check localStorage for a user ID saved by the web app
-            var storedUserId = localStorage.getItem('sensaro_user_id');
-            if (storedUserId && window.__apns_device_token) {
-                window.CrewBoss.registerToken(storedUserId);
-            }
         })();
         """
         config.userContentController.addUserScript(
