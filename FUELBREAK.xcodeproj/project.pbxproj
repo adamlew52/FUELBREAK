@@ -6,20 +6,7 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		7A0248EF2F7C7E3800C56187 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A0248EE2F7C7E3800C56187 /* UserNotifications.framework */; };
-		7A0248F12F7C7E3800C56187 /* UserNotificationsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A0248F02F7C7E3800C56187 /* UserNotificationsUI.framework */; };
-		7A0248FB2F7C7E3800C56187 /* FUELBREAK_NOTIFS.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A0248EC2F7C7E3800C56187 /* FUELBREAK_NOTIFS.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
-		7A0248F92F7C7E3800C56187 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 7A6C394B2F78A69E00F702BF /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 7A0248EB2F7C7E3800C56187;
-			remoteInfo = FUELBREAK_NOTIFS;
-		};
 		7A6C39642F78A6A200F702BF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7A6C394B2F78A69E00F702BF /* Project object */;
@@ -43,7 +30,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				7A0248FB2F7C7E3800C56187 /* FUELBREAK_NOTIFS.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -51,7 +37,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		7A0248EC2F7C7E3800C56187 /* FUELBREAK_NOTIFS.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FUELBREAK_NOTIFS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A0248EE2F7C7E3800C56187 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		7A0248F02F7C7E3800C56187 /* UserNotificationsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotificationsUI.framework; path = System/Library/Frameworks/UserNotificationsUI.framework; sourceTree = SDKROOT; };
 		7A6C39532F78A69E00F702BF /* FUELBREAK.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FUELBREAK.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -61,23 +46,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7A0249112F7C7E5100C56187 /* Exceptions for "FUELBREAK_NOTIFS" folder in "FUELBREAK" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"/Localized: MainInterface.storyboard",
-				Info.plist,
-				NotificationViewController.swift,
-			);
-			target = 7A6C39522F78A69E00F702BF /* FUELBREAK */;
-		};
-		7A0249122F7C7E5100C56187 /* Exceptions for "FUELBREAK_NOTIFS" folder in "FUELBREAK_NOTIFS" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"/Localized: MainInterface.storyboard",
-				NotificationViewController.swift,
-			);
-			target = 7A0248EB2F7C7E3800C56187 /* FUELBREAK_NOTIFS */;
-		};
 		7AB763D62F808036005978D9 /* Exceptions for "FUELBREAK" folder in "FUELBREAK" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -88,15 +56,6 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		7A02490E2F7C7E5000C56187 /* FUELBREAK_NOTIFS */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				7A0249112F7C7E5100C56187 /* Exceptions for "FUELBREAK_NOTIFS" folder in "FUELBREAK" target */,
-				7A0249122F7C7E5100C56187 /* Exceptions for "FUELBREAK_NOTIFS" folder in "FUELBREAK_NOTIFS" target */,
-			);
-			path = FUELBREAK_NOTIFS;
-			sourceTree = "<group>";
-		};
 		7A6C39552F78A69E00F702BF /* FUELBREAK */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -118,15 +77,6 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		7A0248E92F7C7E3800C56187 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				7A0248F12F7C7E3800C56187 /* UserNotificationsUI.framework in Frameworks */,
-				7A0248EF2F7C7E3800C56187 /* UserNotifications.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		7A6C39502F78A69E00F702BF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -167,7 +117,6 @@
 				7A6C39552F78A69E00F702BF /* FUELBREAK */,
 				7A6C39662F78A6A200F702BF /* FUELBREAKTests */,
 				7A6C39702F78A6A200F702BF /* FUELBREAKUITests */,
-				7A02490E2F7C7E5000C56187 /* FUELBREAK_NOTIFS */,
 				7A0248ED2F7C7E3800C56187 /* Frameworks */,
 				7A6C39542F78A69E00F702BF /* Products */,
 			);
@@ -179,7 +128,6 @@
 				7A6C39532F78A69E00F702BF /* FUELBREAK.app */,
 				7A6C39632F78A6A200F702BF /* FUELBREAKTests.xctest */,
 				7A6C396D2F78A6A200F702BF /* FUELBREAKUITests.xctest */,
-				7A0248EC2F7C7E3800C56187 /* FUELBREAK_NOTIFS.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -187,25 +135,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		7A0248EB2F7C7E3800C56187 /* FUELBREAK_NOTIFS */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 7A0249002F7C7E3800C56187 /* Build configuration list for PBXNativeTarget "FUELBREAK_NOTIFS" */;
-			buildPhases = (
-				7A0248E82F7C7E3800C56187 /* Sources */,
-				7A0248E92F7C7E3800C56187 /* Frameworks */,
-				7A0248EA2F7C7E3800C56187 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = FUELBREAK_NOTIFS;
-			packageProductDependencies = (
-			);
-			productName = FUELBREAK_NOTIFS;
-			productReference = 7A0248EC2F7C7E3800C56187 /* FUELBREAK_NOTIFS.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		7A6C39522F78A69E00F702BF /* FUELBREAK */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7A6C39772F78A6A200F702BF /* Build configuration list for PBXNativeTarget "FUELBREAK" */;
@@ -218,10 +147,8 @@
 			buildRules = (
 			);
 			dependencies = (
-				7A0248FA2F7C7E3800C56187 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7A02490E2F7C7E5000C56187 /* FUELBREAK_NOTIFS */,
 				7A6C39552F78A69E00F702BF /* FUELBREAK */,
 			);
 			name = FUELBREAK;
@@ -287,9 +214,6 @@
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
-					7A0248EB2F7C7E3800C56187 = {
-						CreatedOnToolsVersion = 16.4;
-					};
 					7A6C39522F78A69E00F702BF = {
 						CreatedOnToolsVersion = 16.4;
 						LastSwiftMigration = 1640;
@@ -321,19 +245,11 @@
 				7A6C39522F78A69E00F702BF /* FUELBREAK */,
 				7A6C39622F78A6A200F702BF /* FUELBREAKTests */,
 				7A6C396C2F78A6A200F702BF /* FUELBREAKUITests */,
-				7A0248EB2F7C7E3800C56187 /* FUELBREAK_NOTIFS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		7A0248EA2F7C7E3800C56187 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		7A6C39512F78A69E00F702BF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -358,13 +274,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		7A0248E82F7C7E3800C56187 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		7A6C394F2F78A69E00F702BF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -389,11 +298,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		7A0248FA2F7C7E3800C56187 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 7A0248EB2F7C7E3800C56187 /* FUELBREAK_NOTIFS */;
-			targetProxy = 7A0248F92F7C7E3800C56187 /* PBXContainerItemProxy */;
-		};
 		7A6C39652F78A6A200F702BF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 7A6C39522F78A69E00F702BF /* FUELBREAK */;
@@ -407,61 +311,6 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		7A0248FD2F7C7E3800C56187 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 9HJ53KLL68;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FUELBREAK_NOTIFS/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FUELBREAK_NOTIFS;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = SENSARO.FUELBREAK.notifications;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		7A0248FE2F7C7E3800C56187 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 9HJ53KLL68;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FUELBREAK_NOTIFS/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FUELBREAK_NOTIFS;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = SENSARO.FUELBREAK.notifications;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
-		};
 		7A6C39752F78A6A200F702BF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -783,15 +632,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7A0249002F7C7E3800C56187 /* Build configuration list for PBXNativeTarget "FUELBREAK_NOTIFS" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				7A0248FD2F7C7E3800C56187 /* Debug */,
-				7A0248FE2F7C7E3800C56187 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		7A6C394E2F78A69E00F702BF /* Build configuration list for PBXProject "FUELBREAK" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

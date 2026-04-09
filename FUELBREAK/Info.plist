@@ -24,6 +24,10 @@
 		<string>location</string>
 		<string>remote-notification</string>
 	</array>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>SENSARO.FUELBREAK.refresh</string>
+    </array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
