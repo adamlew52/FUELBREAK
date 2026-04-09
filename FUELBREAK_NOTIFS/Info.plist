@@ -4,6 +4,8 @@
 <dict>
 	<key>NSExtension</key>
 	<dict>
+		<key>CFBundleIconFile</key>
+		<string>Assets.xcassets</string>
 		<key>NSExtensionAttributes</key>
 		<dict>
 			<key>UNNotificationExtensionCategory</key>
@@ -15,8 +17,6 @@
 		<string>MainInterface</string>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.usernotifications.content-extension</string>
-		<key>CFBundleIconFile</key>
-		<string>Assets.xcassets</string>
 	</dict>
 </dict>
 </plist>
