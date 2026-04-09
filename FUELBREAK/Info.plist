@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Sensaro needs camera access to capture images to upload to the map showing forestry issues. Community member photo uploads are moderated and managed by real people. This is so the image can be attached to a concern report and shared with land managers.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Sensaro needs photo library access to upload existing photos of forestry concerns. Community member photo uploads are moderated and managed by real people. This is so the image can be attached to a concern report and shared with land managers.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sensaro uses your location to accurately pin forestry concern reports on the map. Community member photo uploads are moderated and managed by real people.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>SENSARO.FUELBREAK.refresh</string>
+	</array>
 	<key>CFBundleIcons</key>
 	<dict>
 		<key>CFBundlePrimaryIcon</key>
@@ -21,13 +31,8 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
-		<string>location</string>
 		<string>remote-notification</string>
 	</array>
-    <key>BGTaskSchedulerPermittedIdentifiers</key>
-    <array>
-        <string>SENSARO.FUELBREAK.refresh</string>
-    </array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
