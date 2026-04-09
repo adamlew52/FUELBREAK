@@ -33,7 +33,7 @@ struct ForestryWebView: UIViewRepresentable {
 
         // ── 2. APNs token bridge with automatic registration ──────────────
         let savedToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
-        let savedUserId = UserDefaults.standard.string(forKey: "current_user_id") ?? ""  // Store this after login
+        //let savedUserId = UserDefaults.standard.string(forKey: "current_user_id") ?? ""  // Store this after login
 
         let tokenBridgeJS = """
         (function () {
