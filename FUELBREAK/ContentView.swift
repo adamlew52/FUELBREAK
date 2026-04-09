@@ -16,8 +16,8 @@ struct ContentView: View {
 
     private let keyMap = [
         Tab.dashboard : "dashboard",
-        Tab.forestry  : "forestry",
-        Tab.wildfire  : "wildfire",
+        //Tab.forestry  : "forestry",
+        //Tab.wildfire  : "wildfire",
         Tab.account   : "account"
     ]
 
@@ -32,13 +32,13 @@ struct ContentView: View {
             .tag(Tab.dashboard)
             .tabItem { Label("Dashboard", systemImage: "camera.fill") }
 
-            ForestryWebView(
-                url: URL(string: "\(BASE_URL)/Display_Maps/Forestry/index.html")!,
-                key: "forestry",
-                coordinator: coordinator
-            )
-            .tag(Tab.forestry)
-            .tabItem { Label("Forestry Map", systemImage: "leaf.fill") }
+            //ForestryWebView(
+            //    url: URL(string: "\(BASE_URL)/Display_Maps/Forestry/index.html")!,
+            //    key: "forestry",
+            //    coordinator: coordinator
+            //)
+            //.tag(Tab.forestry)
+            //.tabItem { Label("Forestry Map", systemImage: "leaf.fill") }
 
             ForestryWebView(
                 url: URL(string: "\(BASE_URL)/Display_Maps/index.html")!,
