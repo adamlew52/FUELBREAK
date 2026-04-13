@@ -102,6 +102,17 @@ final class AppCoordinator: NSObject, ObservableObject {
 // MARK: – WKNavigationDelegate
 // ─────────────────────────────────────────────────────────────────
 extension AppCoordinator: WKNavigationDelegate {
+    
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        // target="_blank" links have no targetFrame — open those in Safari
+        if navigationAction.targetFrame == nil,
+           let url = navigationAction.request.url {
+            UIApplication.shared.open(url)
+            decisionHandler(.cancel)
+            return
+        }
+        decisionHandler(.allow)
+    }
 
     func webView(_ webView: WKWebView,
                  didFailProvisionalNavigation _: WKNavigation!,
