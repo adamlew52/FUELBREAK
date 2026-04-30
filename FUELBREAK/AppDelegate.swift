@@ -7,26 +7,27 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         UNUserNotificationCenter.current()
-            .requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            .requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                
+                // TEMPORARY: Show what happened with permission
+                DispatchQueue.main.async {
+                    let alert = UIAlertController(
+                        title: granted ? "✅ Permission Granted" : "❌ Permission Denied",
+                        message: error != nil ? "Error: \(error!.localizedDescription)" : "Calling registerForRemoteNotifications: \(granted)",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let vc = scene.windows.first?.rootViewController {
+                        vc.present(alert, animated: true)
+                    }
+                }
+                
                 guard granted else { return }
                 DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             }
-
-        // ── Kill the white UIHostingController flash ──────────────
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController?.view.backgroundColor = UIColor(red: 0.96, green: 0.61, blue: 0.04, alpha: 1.0)
-        }
-
-        // ── Fix top safe area white flash ─────────────────────────
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let tabBarController = windowScene.windows.first?.rootViewController as? UITabBarController {
-                tabBarController.view.backgroundColor = UIColor(red: 0.96, green: 0.61, blue: 0.04, alpha: 1.0)
-            }
-        }
 
         return true
     }
@@ -40,19 +41,40 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Persist for use when WebViews load
         UserDefaults.standard.set(token, forKey: "apns_device_token")
 
-        // Broadcast so AppCoordinator can push the token into live WebViews
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .deviceTokenReceived,
-                object: nil,
-                userInfo: ["token": token]
-            )
+        // TEMPORARY: Show token visually to confirm this is firing
+        let alert = UIAlertController(
+            title: "✅ APNs Token Received",
+            message: "First 20 chars:\n\(String(token.prefix(20)))",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let vc = scene.windows.first?.rootViewController {
+            vc.present(alert, animated: true)
         }
+
+        // Broadcast so AppCoordinator can push the token into live WebViews
+        NotificationCenter.default.post(
+            name: .deviceTokenReceived,
+            object: nil,
+            userInfo: ["token": token]
+        )
     }
 
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("❌ APNs registration failed: \(error)")
+        DispatchQueue.main.async {
+            let alert = UIAlertController(
+                title: "❌ APNs Registration Failed",
+                message: error.localizedDescription,
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let vc = scene.windows.first?.rootViewController {
+                vc.present(alert, animated: true)
+            }
+        }
     }
 
     // ── Fires when the user TAPS a notification ───────────────────
