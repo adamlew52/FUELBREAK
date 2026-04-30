@@ -96,6 +96,65 @@ extension AppCoordinator: WKNavigationDelegate {
         decisionHandler(.allow)
     }
 
+    /// After every page load:
+    /// 1. Push the current APNs token into the WebView so JS can read it.
+    /// 2. If the page has a logged-in session in localStorage, register
+    ///    immediately in native Swift — no JS fetch needed.
+    ///    This handles fresh installs where UserDefaults is empty but the
+    ///    user's Cognito session survives in WebKit storage.
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        let apnsToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
+
+        // Step 1 — inject token into JS (informational, for web code that reads it)
+        if !apnsToken.isEmpty {
+            let injectJS = "window.__apns_device_token = '\(apnsToken)';"
+            webView.evaluateJavaScript(injectJS) { _, error in
+                if let error = error {
+                    print("❌ [didFinish] token injection error: \(error.localizedDescription)")
+                } else {
+                    print("✅ [didFinish] APNs token injected after page load")
+                }
+            }
+        }
+
+        // Step 2 — if we have an APNs token, check if the page has a logged-in
+        // Cognito session and register natively without waiting for JS to call us.
+        // This is the critical path for fresh installs: UserDefaults has no userId
+        // yet, but WebKit localStorage may have a valid id_token from a prior session
+        // that survived the reinstall (WebKit storage is NOT always wiped on delete).
+        guard !apnsToken.isEmpty else { return }
+
+        let extractUserIdJS = """
+        (function() {
+            try {
+                var idToken = localStorage.getItem('id_token');
+                if (!idToken) return '';
+                var payload = JSON.parse(atob(idToken.split('.')[1]
+                    .replace(/-/g, '+').replace(/_/g, '/')));
+                // Prefer email as userId to match existing registrations
+                return payload.email || payload.sub || '';
+            } catch(e) {
+                return '';
+            }
+        })();
+        """
+
+        webView.evaluateJavaScript(extractUserIdJS) { [weak self] result, error in
+            guard
+                let userId = result as? String,
+                !userId.isEmpty
+            else {
+                print("⚠️ [didFinish] No logged-in session found in WebKit localStorage")
+                return
+            }
+
+            print("✅ [didFinish] Found session for \(userId) — registering token natively")
+            // Persist so AppDelegate re-registration works on future launches too
+            UserDefaults.standard.set(userId, forKey: "current_user_id")
+            APNSRegistration.send(token: apnsToken, userId: userId)
+        }
+    }
+
     func webView(_ webView: WKWebView,
                  didFailProvisionalNavigation _: WKNavigation!,
                  withError error: Error) {
@@ -190,18 +249,21 @@ extension AppCoordinator: WKScriptMessageHandler {
         }
 
         // ── setUserId: web page tells us who just logged in ──────
-        // Registration is done here in native Swift — no JS fetch needed.
         if message.name == "setUserId", let userId = message.body as? String {
-            print("✅ [Native] userId received from WebView: \(userId)")
             UserDefaults.standard.set(userId, forKey: "current_user_id")
-
             let token = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
-            if token.isEmpty {
-                print("⚠️ [Native] No APNs token yet — registration deferred until token arrives")
-                // AppDelegate will call APNSRegistration.send when the token comes in,
-                // and it will find the saved userId at that point.
-            } else {
-                print("🔄 [Native] Registering token for userId: \(userId)")
+
+            // DIAGNOSTIC
+            let tokenStatus = token.isEmpty ? "MISSING" : "OK (\(String(token.prefix(16)))...)"
+            let diagMsg = "userId:\n\(userId)\n\nAPNs token: \(tokenStatus)\n\n\(token.isEmpty ? "Registration DEFERRED" : "Sending to Lambda now")"
+            DispatchQueue.main.async {
+                let alert = UIAlertController(title: "setUserId Hit", message: diagMsg, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                self.topVC()?.present(alert, animated: true)
+            }
+            // END DIAGNOSTIC
+
+            if !token.isEmpty {
                 APNSRegistration.send(token: token, userId: userId)
             }
             return
