@@ -129,7 +129,7 @@ struct ForestryWebView: UIViewRepresentable {
     private let locationBridgeJS = """
     (function () {
         window.__geo_success = null;
-        window.__geo_error   = null;r
+        window.__geo_error   = null;
 
         const _orig = navigator.geolocation.getCurrentPosition
             .bind(navigator.geolocation);
