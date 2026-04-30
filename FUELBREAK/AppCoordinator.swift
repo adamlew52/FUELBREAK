@@ -139,7 +139,7 @@ extension AppCoordinator: WKNavigationDelegate {
         })();
         """
 
-        webView.evaluateJavaScript(extractUserIdJS) { [weak self] result, error in
+        webView.evaluateJavaScript(extractUserIdJS) { result, error in
             guard
                 let userId = result as? String,
                 !userId.isEmpty
@@ -249,21 +249,18 @@ extension AppCoordinator: WKScriptMessageHandler {
         }
 
         // ── setUserId: web page tells us who just logged in ──────
+        // Registration is done here in native Swift — no JS fetch needed.
         if message.name == "setUserId", let userId = message.body as? String {
+            print("✅ [Native] userId received from WebView: \(userId)")
             UserDefaults.standard.set(userId, forKey: "current_user_id")
+
             let token = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
-
-            // DIAGNOSTIC
-            let tokenStatus = token.isEmpty ? "MISSING" : "OK (\(String(token.prefix(16)))...)"
-            let diagMsg = "userId:\n\(userId)\n\nAPNs token: \(tokenStatus)\n\n\(token.isEmpty ? "Registration DEFERRED" : "Sending to Lambda now")"
-            DispatchQueue.main.async {
-                let alert = UIAlertController(title: "setUserId Hit", message: diagMsg, preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: "OK", style: .default))
-                self.topVC()?.present(alert, animated: true)
-            }
-            // END DIAGNOSTIC
-
-            if !token.isEmpty {
+            if token.isEmpty {
+                print("⚠️ [Native] No APNs token yet — registration deferred until token arrives")
+                // AppDelegate will call APNSRegistration.send when the token comes in,
+                // and it will find the saved userId at that point.
+            } else {
+                print("🔄 [Native] Registering token for userId: \(userId)")
                 APNSRegistration.send(token: token, userId: userId)
             }
             return
