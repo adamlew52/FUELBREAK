@@ -8,92 +8,45 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         UNUserNotificationCenter.current().delegate = self
         UNUserNotificationCenter.current()
             .requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                
-                // TEMPORARY: Show what happened with permission
-                DispatchQueue.main.async {
-                    let alert = UIAlertController(
-                        title: granted ? "✅ Permission Granted" : "❌ Permission Denied",
-                        message: error != nil ? "Error: \(error!.localizedDescription)" : "Calling registerForRemoteNotifications: \(granted)",
-                        preferredStyle: .alert
-                    )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                    if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let vc = scene.windows.first?.rootViewController {
-                        vc.present(alert, animated: true)
-                    }
+                if let error = error {
+                    print("❌ Notification permission error: \(error.localizedDescription)")
                 }
-                
+                print(granted ? "✅ Notification permission granted" : "⚠️ Notification permission denied")
                 guard granted else { return }
                 DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             }
-
         return true
     }
 
-    // ── Receive APNs device token and broadcast it ────────────────
+    // ── Receive APNs device token ─────────────────────────────────
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
         print("✅ APNs token received: \(token)")
 
-        // Persist for use when WebViews load
+        // Persist for use when WebViews load or when userId arrives
         UserDefaults.standard.set(token, forKey: "apns_device_token")
-        
-        // TEMPORARY: Send token directly to Lambda without going through WebView
-        let tokenString = token
-        let url = URL(string: "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod/fuelbreak-notify")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = [
-            "action": "register",
-            "user_id": "test_native_device",
-            "device_token": tokenString
-        ]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let data = data, let str = String(data: data, encoding: .utf8) {
-                print("📱 Direct registration result: \(str)")
-            }
-        }.resume()
-        
 
-        // TEMPORARY: Show token visually to confirm this is firing
-        let alert = UIAlertController(
-            title: "✅ APNs Token Received",
-            message: "First 20 chars:\n\(String(token.prefix(20)))",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let vc = scene.windows.first?.rootViewController {
-            vc.present(alert, animated: true)
-        }
-
-        // Broadcast so AppCoordinator can push the token into live WebViews
+        // Broadcast so AppCoordinator can update any live WebViews
         NotificationCenter.default.post(
             name: .deviceTokenReceived,
             object: nil,
             userInfo: ["token": token]
         )
+
+        // If a userId is already known (returning user), register immediately
+        if let userId = UserDefaults.standard.string(forKey: "current_user_id"),
+           !userId.isEmpty {
+            print("🔄 Token refreshed – re-registering existing user: \(userId)")
+            APNSRegistration.send(token: token, userId: userId)
+        }
     }
 
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        DispatchQueue.main.async {
-            let alert = UIAlertController(
-                title: "❌ APNs Registration Failed",
-                message: error.localizedDescription,
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let vc = scene.windows.first?.rootViewController {
-                vc.present(alert, animated: true)
-            }
-        }
+        print("❌ APNs registration failed: \(error.localizedDescription)")
     }
 
     // ── Fires when the user TAPS a notification ───────────────────
@@ -117,6 +70,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
 // ── Notification names ────────────────────────────────────────────
 extension Notification.Name {
-    static let navigateToTarget  = Notification.Name("navigateToTarget")
+    static let navigateToTarget    = Notification.Name("navigateToTarget")
     static let deviceTokenReceived = Notification.Name("deviceTokenReceived")
 }

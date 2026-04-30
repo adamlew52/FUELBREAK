@@ -40,8 +40,8 @@ final class AppCoordinator: NSObject, ObservableObject {
 
     // ── APNs token injection ─────────────────────────────────────
     /// Called when AppDelegate receives a fresh token from Apple.
-    /// Pushes the token into every currently-loaded WebView so that
-    /// window.fuelbreak.registerToken(userId) will have it ready.
+    /// Updates window.__apns_device_token in every live WebView
+    /// (for informational use in JS only; actual registration is done natively).
     @objc private func handleDeviceTokenReceived(_ notification: Notification) {
         guard let token = notification.userInfo?["token"] as? String else { return }
         injectToken(token)
@@ -49,12 +49,12 @@ final class AppCoordinator: NSObject, ObservableObject {
 
     private func injectToken(_ token: String) {
         for (key, entry) in webViews {
-            let js = "if(window.fuelbreak && window.fuelbreak.setToken) { window.fuelbreak.setToken('\(token)'); }"
+            let js = "window.__apns_device_token = '\(token)';"
             entry.view.evaluateJavaScript(js) { _, error in
                 if let error = error {
-                    print("❌ [\(key)] setToken JS error: \(error.localizedDescription)")
+                    print("❌ [\(key)] token injection JS error: \(error.localizedDescription)")
                 } else {
-                    print("✅ [\(key)] APNs token injected into WebView")
+                    print("✅ [\(key)] APNs token updated in WebView")
                 }
             }
         }
@@ -63,23 +63,6 @@ final class AppCoordinator: NSObject, ObservableObject {
     // ── WebView registration ─────────────────────────────────────
     func register(webView: WKWebView, url: URL, key: String) {
         webViews[key] = (view: webView, url: url)
-
-        // If we already have a token saved, inject it immediately
-        // (handles the case where the token arrived before the WebView loaded)
-        if let savedToken = UserDefaults.standard.string(forKey: "apns_device_token"),
-           !savedToken.isEmpty {
-            let js = "if(window.fuelbreak && window.fuelbreak.setToken) { window.fuelbreak.setToken('\(savedToken)'); }"
-            // Small delay to let the page's own JS finish executing first
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                webView.evaluateJavaScript(js) { _, error in
-                    if let error = error {
-                        print("❌ [\(key)] deferred setToken error: \(error.localizedDescription)")
-                    } else {
-                        print("✅ [\(key)] deferred token injected on register")
-                    }
-                }
-            }
-        }
     }
 
     func reloadTab(_ key: String) {
@@ -111,7 +94,7 @@ extension AppCoordinator: WKNavigationDelegate {
             return
         }
         decisionHandler(.allow)
-    }   
+    }
 
     func webView(_ webView: WKWebView,
                  didFailProvisionalNavigation _: WKNavigation!,
@@ -200,19 +183,26 @@ extension AppCoordinator: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController,
                                didReceive message: WKScriptMessage) {
 
-        // ── setUserId: web page tells us who just logged in ──────
-        if message.name == "setUserId", let userId = message.body as? String {
-            UserDefaults.standard.set(userId, forKey: "current_user_id")
-            print("✅ [Native] User ID saved: \(userId)")
+        // ── xcodelogdebug: relay JS console.log to Xcode ────────
+        if message.name == "xcodelogdebug" {
+            print("🌐 [JS] \(message.body)")
+            return
+        }
 
-            // Trigger token registration on the web side now that we have a userId
-            let js = "if(window.fuelbreak && window.fuelbreak.registerToken) { window.fuelbreak.registerToken('\(userId)'); }"
-            message.webView?.evaluateJavaScript(js) { _, error in
-                if let error = error {
-                    print("❌ registerToken JS error: \(error.localizedDescription)")
-                } else {
-                    print("✅ registerToken called for userId: \(userId)")
-                }
+        // ── setUserId: web page tells us who just logged in ──────
+        // Registration is done here in native Swift — no JS fetch needed.
+        if message.name == "setUserId", let userId = message.body as? String {
+            print("✅ [Native] userId received from WebView: \(userId)")
+            UserDefaults.standard.set(userId, forKey: "current_user_id")
+
+            let token = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
+            if token.isEmpty {
+                print("⚠️ [Native] No APNs token yet — registration deferred until token arrives")
+                // AppDelegate will call APNSRegistration.send when the token comes in,
+                // and it will find the saved userId at that point.
+            } else {
+                print("🔄 [Native] Registering token for userId: \(userId)")
+                APNSRegistration.send(token: token, userId: userId)
             }
             return
         }

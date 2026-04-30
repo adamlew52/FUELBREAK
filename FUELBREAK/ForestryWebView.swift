@@ -1,7 +1,6 @@
 import SwiftUI
 import WebKit
 
-// Use the endpoint from your Lambda
 private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod/fuelbreak-notify"
 
 struct ForestryWebView: UIViewRepresentable {
@@ -14,7 +13,7 @@ struct ForestryWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
 
-        // ── 1. Existing: inline media, geolocation, no‑zoom ──────────────
+        // ── 1. Inline media, geolocation, no-zoom ────────────────
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
@@ -31,47 +30,23 @@ struct ForestryWebView: UIViewRepresentable {
                          forMainFrameOnly: true)
         )
 
-        // ── 2. APNs token bridge with automatic registration ──────────────
+        // ── 2. APNs token bridge ──────────────────────────────────
+        // window.__apns_device_token is kept current by AppCoordinator.injectToken().
+        // Registration to Lambda is done natively in Swift (AppCoordinator.setUserId handler)
+        // so there is no JS fetch() call here — that was the source of the production failure.
         let savedToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
-        //let savedUserId = UserDefaults.standard.string(forKey: "current_user_id") ?? ""  // Store this after login
-
         let tokenBridgeJS = """
         (function () {
+            // Expose the current token so web JS can read it if needed (read-only use).
             window.__apns_device_token = "\(savedToken)";
             window.__apns_api_url      = "\(API_GATEWAY_URL)";
 
+            // fuelbreak.registerToken(userId) — signals native Swift to perform registration.
+            // Call this from your web JS after login exactly as before.
             window.fuelbreak = {
-                // Call this from Swift when the real token arrives
-                setToken: function(token) {
-                    window.__apns_device_token = token;
-                    console.log('[fuelbreak] token updated to: ' + token);
-                },
-                // Call this after login (from your web JS)
                 registerToken: function (userId) {
-                    console.log('[fuelbreak] registerToken called for userId:', userId);
-                    var token = window.__apns_device_token;
-                    console.log('[fuelbreak] current token length:', token ? token.length : 0);
-                    if (!token || token.length === 0) {
-                        console.warn('[fuelbreak] aborting – no token');
-                        return;
-                    }
-                    console.log('[fuelbreak] Fetching to:', window.__apns_api_url);
-                    fetch(window.__apns_api_url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action: 'register',
-                            user_id: String(userId),
-                            device_token: token
-                        })
-                    }).then(function(r) {
-                        console.log('[fuelbreak] fetch status:', r.status);
-                        return r.text();
-                    }).then(function(t) {
-                        console.log('[fuelbreak] response body:', t);
-                    }).catch(function(err) {
-                        console.warn('[fuelbreak] fetch error:', err);
-                    });
+                    console.log('[fuelbreak] registerToken called for userId: ' + userId);
+                    window.webkit.messageHandlers.setUserId.postMessage(String(userId));
                 }
             };
         })();
@@ -81,9 +56,8 @@ struct ForestryWebView: UIViewRepresentable {
                          injectionTime: .atDocumentStart,
                          forMainFrameOnly: false)
         )
-        
 
-        // ── 3. JS console → Xcode console (debugging) ───────────────
+        // ── 3. JS console → Xcode console (debugging) ────────────
         config.userContentController.add(context.coordinator, name: "xcodelogdebug")
         config.userContentController.addUserScript(
             WKUserScript(source: """
@@ -97,9 +71,11 @@ struct ForestryWebView: UIViewRepresentable {
             })();
             """, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         )
+
+        // setUserId message handler – used by fuelbreak.registerToken above
         config.userContentController.add(context.coordinator, name: "setUserId")
 
-        // ── Create and configure the WebView ─────────────────────────────
+        // ── Create and configure the WebView ─────────────────────
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
         webView.backgroundColor = UIColor(red: 0.0, green: 0.20, blue: 0.0, alpha: 1.0)
@@ -113,19 +89,13 @@ struct ForestryWebView: UIViewRepresentable {
 
         context.coordinator.register(webView: webView, url: url, key: key)
         webView.load(URLRequest(url: url))
-        // Wait 5 seconds, then print what token the web view currently has
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            webView.evaluateJavaScript("window.__apns_device_token || 'NO_TOKEN'") { result, error in
-                print("🔍 WebView token after 5s: \(result ?? "nil") error: \(error?.localizedDescription ?? "none")")
-            }
-        }
 
         return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    // ── Existing JS bridges (unchanged) ─────────────────────────────────
+    // ── JS bridges ───────────────────────────────────────────────
     private let locationBridgeJS = """
     (function () {
         window.__geo_success = null;
