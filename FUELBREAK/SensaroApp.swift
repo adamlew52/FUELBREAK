@@ -6,7 +6,7 @@ struct SensaroApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     init() {
-        requestNotificationPermission()
+        //requestNotificationPermission()
         configureTabBar()
     }
     

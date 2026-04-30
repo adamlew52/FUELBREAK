@@ -344,7 +344,6 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 9HJ53KLL68;
@@ -409,6 +408,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
+				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = FUELBREAKRelease.entitlements;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 9HJ53KLL68;
@@ -426,7 +426,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
@@ -448,11 +448,11 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FUELBREAK/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Used to take photos for upload.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Sensaro needs camera access to capture images to upload to the map showing forestry issues. Community member photo uploads are moderated and managed by real people. This is so the image can be attached to a concern report and shared with land managers.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "FUELBREAK uses your location in the background to alert you to nearby fire activity.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FUELBREAK uses your location to show you nearby wildfire and forestry activity.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Sensaro uses your location to accurately pin forestry concern reports on the map. Community member photo uploads are moderated and managed by real people.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Used to save photos to your library.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Used to select photos for upload.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sensaro needs photo library access to upload existing photos of forestry concerns. Community member photo uploads are moderated and managed by real people. This is so the image can be attached to a concern report and shared with land managers.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -505,11 +505,11 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FUELBREAK/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Used to take photos for upload.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Sensaro needs camera access to capture images to upload to the map showing forestry issues. Community member photo uploads are moderated and managed by real people. This is so the image can be attached to a concern report and shared with land managers.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "FUELBREAK uses your location in the background to alert you to nearby fire activity.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FUELBREAK uses your location to show you nearby wildfire and forestry activity.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Sensaro uses your location to accurately pin forestry concern reports on the map. Community member photo uploads are moderated and managed by real people.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Used to save photos to your library.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Used to select photos for upload.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sensaro needs photo library access to upload existing photos of forestry concerns. Community member photo uploads are moderated and managed by real people. This is so the image can be attached to a concern report and shared with land managers.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
