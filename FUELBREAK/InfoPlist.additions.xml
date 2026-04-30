@@ -42,13 +42,9 @@
             <string>AppIcon</string>
         </dict>
     </dict>
-    
-    <key>CFBundleIdentifier</key>
-    <string>/Users/alew/Desktop/CREWBOSS/CREWBOSS/WATCH-CREWBOSS Watch App/Assets.xcassets</string>
-
     <!-- ── Camera ─────────────────────────────────────────────── -->
     <key>NSCameraUsageDescription</key>
-    <string>Sensaro needs camera access to photograph forestry concerns like pine beetle damage or wildfire risk areas.</string>
+    <string>Sensaro uses the camera to take and upload photos of forestry concerns (e.g., diseased trees, invasive species) or wildfire risks (e.g., dry brush). For example, photograph a high-risk area and upload it to notify local forestry services.</string>
 
     <!-- ── Photo Library ──────────────────────────────────────── -->
     <key>NSPhotoLibraryUsageDescription</key>

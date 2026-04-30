@@ -40,6 +40,25 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         // Persist for use when WebViews load
         UserDefaults.standard.set(token, forKey: "apns_device_token")
+        
+        // TEMPORARY: Send token directly to Lambda without going through WebView
+        let tokenString = token
+        let url = URL(string: "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod/fuelbreak-notify")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "action": "register",
+            "user_id": "test_native_device",
+            "device_token": tokenString
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let data = data, let str = String(data: data, encoding: .utf8) {
+                print("📱 Direct registration result: \(str)")
+            }
+        }.resume()
+        
 
         // TEMPORARY: Show token visually to confirm this is firing
         let alert = UIAlertController(
