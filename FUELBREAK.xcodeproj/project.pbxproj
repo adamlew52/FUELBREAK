@@ -53,6 +53,20 @@
 			);
 			target = 7A6C39522F78A69E00F702BF /* FUELBREAK */;
 		};
+		7ACF4C912FA79FD600E80052 /* Exceptions for "FUELBREAK" folder in "FUELBREAKTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Sensaro.storekit,
+			);
+			target = 7A6C39622F78A6A200F702BF /* FUELBREAKTests */;
+		};
+		7ACF4C922FA79FD600E80052 /* Exceptions for "FUELBREAK" folder in "FUELBREAKUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Sensaro.storekit,
+			);
+			target = 7A6C396C2F78A6A200F702BF /* FUELBREAKUITests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,6 +74,8 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				7AB763D62F808036005978D9 /* Exceptions for "FUELBREAK" folder in "FUELBREAK" target */,
+				7ACF4C912FA79FD600E80052 /* Exceptions for "FUELBREAK" folder in "FUELBREAKTests" target */,
+				7ACF4C922FA79FD600E80052 /* Exceptions for "FUELBREAK" folder in "FUELBREAKUITests" target */,
 			);
 			path = FUELBREAK;
 			sourceTree = "<group>";
