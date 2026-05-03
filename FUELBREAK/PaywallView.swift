@@ -75,52 +75,6 @@ struct PaywallView: View {
 
     private var planCardsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-
-            // ── Visible diagnostic banner when StoreKit returns nothing ──
-            if !store.isLoadingProducts && store.products.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(Color(red: 0.96, green: 0.61, blue: 0.04))
-
-                    Text("Products Not Loading")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.white)
-
-                    Text("StoreKit returned 0 products. Check:")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.5))
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        DiagRow(text: "If you are seeing this message please click the custom/unlimited button below, and email us to ge this fixed.")
-                        //DiagRow(text: "Sensaro.storekit is checked under File Inspector → Target Membership")
-                        //DiagRow(text: "Product IDs in .storekit match SensaroProduct enum exactly")
-                        //DiagRow(text: "Clean build folder (⇧⌘K) then re-run")
-                    }
-                    .padding(14)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))
-
-                    Button(action: { Task { await store.loadProducts() } }) {
-                        Text("Retry Loading Products")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 28)
-                            .padding(.vertical, 10)
-                            .background(Capsule().fill(Color(red: 0.96, green: 0.61, blue: 0.04)))
-                    }
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white.opacity(0.04))
-                        .overlay(RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color(red: 0.96, green: 0.61, blue: 0.04).opacity(0.5), lineWidth: 1.5))
-                )
-                .padding(.horizontal, 20)
-                .padding(.bottom, 8)
-            }
-
             SectionLabel(text: "SUBSCRIBE FOR RECURRING CREDITS")
             HStack(spacing: 12) {
                 SubscriptionCard(
