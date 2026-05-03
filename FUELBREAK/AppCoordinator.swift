@@ -1,3 +1,4 @@
+import SwiftUI
 import WebKit
 import CoreLocation
 import PhotosUI
@@ -9,6 +10,13 @@ import PhotosUI
 
 final class AppCoordinator: NSObject, ObservableObject {
     @Published var pendingTarget: (tab: String, elementId: String)? = nil
+
+    // ── Paywall ──────────────────────────────────────────────────
+    /// Set to true to present the native StoreKit paywall.
+    /// The idToken is extracted from WebKit localStorage so StoreKitManager
+    /// can authenticate purchases against your Lambda.
+    @Published var showPaywall: Bool = false
+    @Published var paywallIdToken: String = ""
 
     // ── Active WebViews ──────────────────────────────────────────
     private var webViews: [String: (view: WKWebView, url: URL)] = [:]
@@ -25,7 +33,6 @@ final class AppCoordinator: NSObject, ObservableObject {
         locationManager.delegate        = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
 
-        // Listen for APNs token so we can inject it into live WebViews
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDeviceTokenReceived(_:)),
@@ -39,9 +46,6 @@ final class AppCoordinator: NSObject, ObservableObject {
     }
 
     // ── APNs token injection ─────────────────────────────────────
-    /// Called when AppDelegate receives a fresh token from Apple.
-    /// Updates window.__apns_device_token in every live WebView
-    /// (for informational use in JS only; actual registration is done natively).
     @objc private func handleDeviceTokenReceived(_ notification: Notification) {
         guard let token = notification.userInfo?["token"] as? String else { return }
         injectToken(token)
@@ -78,6 +82,45 @@ final class AppCoordinator: NSObject, ObservableObject {
         """
         webViews[tab]?.view.evaluateJavaScript(js, completionHandler: nil)
     }
+
+    // ── Paywall: extract idToken then present ────────────────────
+    /// Called when the WebView tries to navigate to any market/purchase URL.
+    /// Reads the Cognito id_token out of WebKit localStorage so that
+    /// StoreKitManager can send it to your Lambda for credit attribution.
+    private func presentPaywallFromWebView(_ webView: WKWebView) {
+        let extractTokenJS = """
+        (function() {
+            try {
+                var t = localStorage.getItem('id_token');
+                return t || '';
+            } catch(e) { return ''; }
+        })();
+        """
+        webView.evaluateJavaScript(extractTokenJS) { [weak self] result, _ in
+            DispatchQueue.main.async {
+                self?.paywallIdToken = (result as? String) ?? ""
+                self?.showPaywall = true
+            }
+        }
+    }
+
+    /// Call this from your view hierarchy after a successful purchase so the
+    /// WebView's credit display refreshes without a full page reload.
+    func notifyWebViewOfPurchase(creditsAdded: Int) {
+        let js = """
+        (function() {
+            // Dispatch a custom event that user_script.js or dashboard.js can listen to
+            window.dispatchEvent(new CustomEvent('sensaro:creditsUpdated', {
+                detail: { creditsAdded: \(creditsAdded) }
+            }));
+            // Also directly re-fetch user data if the page exposes uInit()
+            if (typeof uInit === 'function') { uInit(); }
+        })();
+        """
+        for (_, entry) in webViews {
+            entry.view.evaluateJavaScript(js, completionHandler: nil)
+        }
+    }
 }
 
 
@@ -85,27 +128,39 @@ final class AppCoordinator: NSObject, ObservableObject {
 // MARK: – WKNavigationDelegate
 // ─────────────────────────────────────────────────────────────────
 extension AppCoordinator: WKNavigationDelegate {
-    
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        if let url = navigationAction.request.url,
-           url.absoluteString.contains("sensaro.net/Mobile/market/purchase") {
-            UIApplication.shared.open(url)
-            decisionHandler(.cancel)
-            return
+
+    func webView(_ webView: WKWebView,
+                 decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+
+        if let url = navigationAction.request.url {
+            let urlString = url.absoluteString
+
+            // ── Intercept ALL market/purchase navigation ─────────
+            // Previously this opened Safari. Now it shows the native paywall.
+            // Catches:
+            //   sensaro.net/Mobile/market/purchase/...
+            //   sensaro.net/Mobile/market/index.html
+            //   sensaro.net/Mobile/market/ (any market path)
+            let isMarketURL = urlString.contains("sensaro.net/Mobile/market")
+                           || urlString.contains("/market/purchase")
+                           || urlString.contains("/market/index")
+
+            if isMarketURL {
+                // Extract the idToken from the webView that's navigating,
+                // then present the paywall natively.
+                presentPaywallFromWebView(webView)
+                decisionHandler(.cancel)    // block the web navigation
+                return
+            }
         }
+
         decisionHandler(.allow)
     }
 
-    /// After every page load:
-    /// 1. Push the current APNs token into the WebView so JS can read it.
-    /// 2. If the page has a logged-in session in localStorage, register
-    ///    immediately in native Swift — no JS fetch needed.
-    ///    This handles fresh installs where UserDefaults is empty but the
-    ///    user's Cognito session survives in WebKit storage.
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         let apnsToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
 
-        // Step 1 — inject token into JS (informational, for web code that reads it)
         if !apnsToken.isEmpty {
             let injectJS = "window.__apns_device_token = '\(apnsToken)';"
             webView.evaluateJavaScript(injectJS) { _, error in
@@ -117,11 +172,6 @@ extension AppCoordinator: WKNavigationDelegate {
             }
         }
 
-        // Step 2 — if we have an APNs token, check if the page has a logged-in
-        // Cognito session and register natively without waiting for JS to call us.
-        // This is the critical path for fresh installs: UserDefaults has no userId
-        // yet, but WebKit localStorage may have a valid id_token from a prior session
-        // that survived the reinstall (WebKit storage is NOT always wiped on delete).
         guard !apnsToken.isEmpty else { return }
 
         let extractUserIdJS = """
@@ -131,7 +181,6 @@ extension AppCoordinator: WKNavigationDelegate {
                 if (!idToken) return '';
                 var payload = JSON.parse(atob(idToken.split('.')[1]
                     .replace(/-/g, '+').replace(/_/g, '/')));
-                // Prefer email as userId to match existing registrations
                 return payload.email || payload.sub || '';
             } catch(e) {
                 return '';
@@ -149,7 +198,6 @@ extension AppCoordinator: WKNavigationDelegate {
             }
 
             print("✅ [didFinish] Found session for \(userId) — registering token natively")
-            // Persist so AppDelegate re-registration works on future launches too
             UserDefaults.standard.set(userId, forKey: "current_user_id")
             APNSRegistration.send(token: apnsToken, userId: userId)
         }
@@ -242,14 +290,21 @@ extension AppCoordinator: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController,
                                didReceive message: WKScriptMessage) {
 
-        // ── xcodelogdebug: relay JS console.log to Xcode ────────
         if message.name == "xcodelogdebug" {
             print("🌐 [JS] \(message.body)")
             return
         }
 
-        // ── setUserId: web page tells us who just logged in ──────
-        // Registration is done here in native Swift — no JS fetch needed.
+        // ── openPaywall: web JS can trigger the paywall directly ─
+        // Add this call to any web button as a fallback:
+        //   window.webkit.messageHandlers.openPaywall.postMessage({})
+        if message.name == "openPaywall" {
+            if let webView = message.webView {
+                presentPaywallFromWebView(webView)
+            }
+            return
+        }
+
         if message.name == "setUserId", let userId = message.body as? String {
             print("✅ [Native] userId received from WebView: \(userId)")
             UserDefaults.standard.set(userId, forKey: "current_user_id")
@@ -257,8 +312,6 @@ extension AppCoordinator: WKScriptMessageHandler {
             let token = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
             if token.isEmpty {
                 print("⚠️ [Native] No APNs token yet — registration deferred until token arrives")
-                // AppDelegate will call APNSRegistration.send when the token comes in,
-                // and it will find the saved userId at that point.
             } else {
                 print("🔄 [Native] Registering token for userId: \(userId)")
                 APNSRegistration.send(token: token, userId: userId)
@@ -266,7 +319,6 @@ extension AppCoordinator: WKScriptMessageHandler {
             return
         }
 
-        // ── locationRequest: web page needs device GPS ───────────
         guard message.name == "locationRequest" else { return }
         locationRequester = message.webView
 

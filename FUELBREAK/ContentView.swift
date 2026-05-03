@@ -16,8 +16,6 @@ struct ContentView: View {
 
     private let keyMap = [
         Tab.dashboard : "dashboard",
-        //Tab.forestry  : "forestry",
-        //Tab.wildfire  : "wildfire",
         Tab.account   : "account"
     ]
 
@@ -31,14 +29,6 @@ struct ContentView: View {
             )
             .tag(Tab.dashboard)
             .tabItem { Label("Dashboard", systemImage: "camera.fill") }
-
-            //ForestryWebView(
-            //    url: URL(string: "\(BASE_URL)/Display_Maps/Forestry/index.html")!,
-            //    key: "forestry",
-            //    coordinator: coordinator
-            //)
-            //.tag(Tab.forestry)
-            //.tabItem { Label("Forestry Map", systemImage: "leaf.fill") }
 
             ForestryWebView(
                 url: URL(string: "\(BASE_URL)/Display_Maps/index.html")!,
@@ -56,22 +46,27 @@ struct ContentView: View {
             .tag(Tab.account)
             .tabItem { Label("Account", systemImage: "person.fill") }
         }
-        
-        
-        
-        ///.ignoresSafeArea()
-        //.toolbarBackground(.visible, for: .tabBar)                // Show tab bar background
-        //.toolbarColorScheme(.dark, for: .tabBar)                 // Force light/dark appearance
-        //.tint(Color(red: 0.19, green: 0.44, blue: 0.31))
         .background(
             Color(red: 0.96, green: 0.61, blue: 0.04)
-                .ignoresSafeArea()          // ← bleeds into top safe area
+                .ignoresSafeArea()
         )
         .tint(Color(red: 0.19, green: 0.44, blue: 0.31))
-        //.toolbarBackground(Color(red: 0.15, green: 1.00, blue: 0.42), for: .tabBar) // Custom background
-        
-        //configureTabBar()
-        
+
+        // ── Native paywall sheet ─────────────────────────────────
+        // Presented whenever the WebView tries to navigate to any
+        // sensaro.net/Mobile/market URL. AppCoordinator intercepts
+        // that navigation, reads the Cognito id_token from WebKit
+        // localStorage, and sets showPaywall = true.
+        .sheet(isPresented: $coordinator.showPaywall) {
+            PaywallView(
+                idToken: coordinator.paywallIdToken,
+                onPurchaseComplete: { creditsAdded in
+                    // Re-runs uInit() in all open WebViews so the
+                    // credit count refreshes without a full page reload.
+                    coordinator.notifyWebViewOfPurchase(creditsAdded: creditsAdded)
+                }
+            )
+        }
 
         .onChange(of: selectedTab) {
             if let key = keyMap[selectedTab] {

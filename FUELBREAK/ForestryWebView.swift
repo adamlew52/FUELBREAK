@@ -5,7 +5,7 @@ private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaw
 
 struct ForestryWebView: UIViewRepresentable {
     let url: URL
-    let key: String          // Unique tab identifier
+    let key: String
     let coordinator: AppCoordinator
 
     func makeCoordinator() -> AppCoordinator { coordinator }
@@ -17,7 +17,6 @@ struct ForestryWebView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
-        // Geolocation bridge
         config.userContentController.add(context.coordinator, name: "locationRequest")
         config.userContentController.addUserScript(
             WKUserScript(source: locationBridgeJS,
@@ -31,18 +30,12 @@ struct ForestryWebView: UIViewRepresentable {
         )
 
         // ── 2. APNs token bridge ──────────────────────────────────
-        // window.__apns_device_token is kept current by AppCoordinator.injectToken().
-        // Registration to Lambda is done natively in Swift (AppCoordinator.setUserId handler)
-        // so there is no JS fetch() call here — that was the source of the production failure.
         let savedToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
         let tokenBridgeJS = """
         (function () {
-            // Expose the current token so web JS can read it if needed (read-only use).
             window.__apns_device_token = "\(savedToken)";
             window.__apns_api_url      = "\(API_GATEWAY_URL)";
 
-            // fuelbreak.registerToken(userId) — signals native Swift to perform registration.
-            // Call this from your web JS after login exactly as before.
             window.fuelbreak = {
                 registerToken: function (userId) {
                     console.log('[fuelbreak] registerToken called for userId: ' + userId);
@@ -72,8 +65,16 @@ struct ForestryWebView: UIViewRepresentable {
             """, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         )
 
-        // setUserId message handler – used by fuelbreak.registerToken above
+        // ── 4. setUserId handler ──────────────────────────────────
         config.userContentController.add(context.coordinator, name: "setUserId")
+
+        // ── 5. openPaywall handler ────────────────────────────────
+        // Lets any web page trigger the native paywall directly with:
+        //   window.webkit.messageHandlers.openPaywall.postMessage({})
+        // This is a fallback — the primary trigger is URL interception
+        // in AppCoordinator.decidePolicyFor(), which catches any navigation
+        // to sensaro.net/Mobile/market without needing web-side changes.
+        config.userContentController.add(context.coordinator, name: "openPaywall")
 
         // ── Create and configure the WebView ─────────────────────
         let webView = WKWebView(frame: .zero, configuration: config)
