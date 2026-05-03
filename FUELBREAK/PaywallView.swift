@@ -92,10 +92,10 @@ struct PaywallView: View {
                         .foregroundColor(.white.opacity(0.5))
 
                     VStack(alignment: .leading, spacing: 8) {
-                        DiagRow(text: "Scheme → Run → Options → StoreKit Config = Sensaro.storekit")
-                        DiagRow(text: "Sensaro.storekit is checked under File Inspector → Target Membership")
-                        DiagRow(text: "Product IDs in .storekit match SensaroProduct enum exactly")
-                        DiagRow(text: "Clean build folder (⇧⌘K) then re-run")
+                        DiagRow(text: "If you are seeing this message please click the custom/unlimited button below, and email us to ge this fixed.")
+                        //DiagRow(text: "Sensaro.storekit is checked under File Inspector → Target Membership")
+                        //DiagRow(text: "Product IDs in .storekit match SensaroProduct enum exactly")
+                        //DiagRow(text: "Clean build folder (⇧⌘K) then re-run")
                     }
                     .padding(14)
                     .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))

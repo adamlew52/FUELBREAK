@@ -55,7 +55,7 @@ final class StoreKitManager: ObservableObject {
 
     // ── Set this to true to skip StoreKit and show UI with fallback prices ──
     // Flip to false once StoreKit config is confirmed working.
-    private let debugBypassStoreKit = true
+    private let debugBypassStoreKit = false
 
     private let lambdaBase = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod"
     private var transactionListenerTask: Task<Void, Never>?
