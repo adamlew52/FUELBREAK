@@ -14,7 +14,21 @@
 
   ],
   "products" : [
-
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "net.sensaro.payg.50calls",
+      "localizations" : [
+        {
+          "description" : "50 calls to run wildfire risk assessments. One-time purchase, can be bought again when used up.",
+          "displayName" : "Pay-As-You-Go",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "net.sensaro.payg.50calls",
+      "referenceName" : "Pay-As-You-Go 50 Calls",
+      "type" : "Consumable"
+    }
   ],
   "settings" : {
     "_applicationInternalID" : "6761627019",

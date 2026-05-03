@@ -208,7 +208,8 @@ struct PaywallView: View {
 
     private func purchase(_ sensaroProduct: SensaroProduct) async {
         guard let product = store.product(for: sensaroProduct) else {
-            alertMessage = "Product unavailable. Please try again later."
+            let loadedIDs = store.products.map(\.id).joined(separator: "\n")
+            alertMessage = "Product not found: \(sensaroProduct.rawValue)\n\nStoreKit loaded \(store.products.count) product(s):\n\(loadedIDs.isEmpty ? "none" : loadedIDs)\n\nCheck: Scheme → Run → Options → StoreKit Config is set, and Sensaro.storekit has Target Membership enabled."
             showErrorAlert = true
             return
         }
