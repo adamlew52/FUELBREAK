@@ -117,7 +117,7 @@ final class StoreKitManager: ObservableObject {
 
         guard let product = products.first(where: { $0.id == sensaroProduct.rawValue }) else {
             let ids = products.map(\.id).joined(separator: "\n")
-            purchaseState = .failed("Product not found: \(sensaroProduct.rawValue)\n\nLoaded \(products.count) products:\n\(ids.isEmpty ? "none" : ids)")
+            //purchaseState = .failed("Product not found: \(sensaroProduct.rawValue)\n\nLoaded \(products.count) products:\n\(ids.isEmpty ? "none" : ids)")
             return
         }
         await purchaseProduct(product, idToken: idToken)
