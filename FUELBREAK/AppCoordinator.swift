@@ -2,6 +2,8 @@ import SwiftUI
 import WebKit
 import CoreLocation
 import PhotosUI
+var storeKitManager: StoreKitManager?
+
 
 /// ObservableObject so ContentView can hold it with @StateObject.
 /// Implements all the WKWebView delegate protocols and bridges
@@ -17,6 +19,7 @@ final class AppCoordinator: NSObject, ObservableObject {
     /// can authenticate purchases against your Lambda.
     @Published var showPaywall: Bool = false
     @Published var paywallIdToken: String = ""
+    var storeKitManager: StoreKitManager?
 
     // ── Active WebViews ──────────────────────────────────────────
     private var webViews: [String: (view: WKWebView, url: URL)] = [:]
@@ -98,12 +101,17 @@ final class AppCoordinator: NSObject, ObservableObject {
         """
         webView.evaluateJavaScript(extractTokenJS) { [weak self] result, _ in
             DispatchQueue.main.async {
-                self?.paywallIdToken = (result as? String) ?? ""
+                let token = (result as? String) ?? ""
+                self?.paywallIdToken = token
                 self?.showPaywall = true
+
+                // Retry any purchases that failed to verify while offline
+                if !token.isEmpty, let skm = self?.storeKitManager {
+                    Task { await skm.retryPendingVerifications(idToken: token) }
+                }
             }
         }
     }
-
     /// Call this from your view hierarchy after a successful purchase so the
     /// WebView's credit display refreshes without a full page reload.
     func notifyWebViewOfPurchase(creditsAdded: Int) {

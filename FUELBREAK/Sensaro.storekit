@@ -14,7 +14,21 @@
 
   ],
   "products" : [
-
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "6766075100",
+      "localizations" : [
+        {
+          "description" : "50 one-time credits for wildfire risk assessments.",
+          "displayName" : "Pay-As-You-Go 50 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "net.sensaro.payg.50calls",
+      "referenceName" : "net.sensaro.payg.50calls",
+      "type" : "Consumable"
+    }
   ],
   "settings" : {
     "_applicationInternalID" : "6761627019",
@@ -121,7 +135,7 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "1,500 credits per year to run wildfire risk assessments",
+              "description" : "1,500 credits per year to run wildfire risk assessments.",
               "displayName" : "Yearly",
               "locale" : "en_US"
             }
@@ -143,4 +157,3 @@
     "minor" : 0
   }
 }
-

@@ -12,6 +12,7 @@ private enum Tab {
 struct ContentView: View {
 
     @StateObject private var coordinator = AppCoordinator()
+    @StateObject private var storeKitManager = StoreKitManager()
     @State private var selectedTab = Tab.dashboard
 
     private let keyMap = [
@@ -52,20 +53,19 @@ struct ContentView: View {
         )
         .tint(Color(red: 0.19, green: 0.44, blue: 0.31))
 
+        .onAppear {
+            coordinator.storeKitManager = storeKitManager
+        }
+
         // ── Native paywall sheet ─────────────────────────────────
-        // Presented whenever the WebView tries to navigate to any
-        // sensaro.net/Mobile/market URL. AppCoordinator intercepts
-        // that navigation, reads the Cognito id_token from WebKit
-        // localStorage, and sets showPaywall = true.
         .sheet(isPresented: $coordinator.showPaywall) {
             PaywallView(
                 idToken: coordinator.paywallIdToken,
                 onPurchaseComplete: { creditsAdded in
-                    // Re-runs uInit() in all open WebViews so the
-                    // credit count refreshes without a full page reload.
                     coordinator.notifyWebViewOfPurchase(creditsAdded: creditsAdded)
                 }
             )
+            .environmentObject(storeKitManager)
         }
 
         .onChange(of: selectedTab) {
