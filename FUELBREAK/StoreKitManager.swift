@@ -25,7 +25,6 @@ enum SensaroProduct: String, CaseIterable {
 
     var isSubscription: Bool { self == .monthly || self == .yearly }
 
-    /// Hardcoded fallback price shown when StoreKit returns nothing
     var fallbackPrice: String {
         switch self {
         case .monthly: return "$7.99"
@@ -51,11 +50,7 @@ final class StoreKitManager: ObservableObject {
     @Published var products: [Product] = []
     @Published var purchaseState: PurchaseState = .idle
     @Published var activeSubscription: Product? = nil
-    @Published var isLoadingProducts = false
-
-    // ── Set this to true to skip StoreKit and show UI with fallback prices ──
-    // Flip to false once StoreKit config is confirmed working.
-    private let debugBypassStoreKit = false
+    @Published var isLoadingProducts = true   // start true so buttons show spinner
 
     private let lambdaBase = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod"
     private var transactionListenerTask: Task<Void, Never>?
@@ -72,31 +67,25 @@ final class StoreKitManager: ObservableObject {
         isLoadingProducts = true
         defer { isLoadingProducts = false }
 
-        if debugBypassStoreKit {
-            // In bypass mode products stays empty but formattedPrice uses fallbackPrice.
-            // The UI will render with hardcoded prices so you can confirm layout works.
-            print("⚠️ [StoreKit] DEBUG BYPASS MODE — not calling StoreKit")
-            print("   Flip debugBypassStoreKit = false once .storekit config is working")
-            return
-        }
-
         let ids = SensaroProduct.allCases.map(\.rawValue)
-        print("🛒 [StoreKit] Requesting: \(ids)")
+        print("🛒 [StoreKit] Requesting \(ids.count) products: \(ids)")
 
         do {
             let fetched = try await Product.products(for: ids)
-            print("🛒 [StoreKit] Got \(fetched.count) product(s)")
+            print("🛒 [StoreKit] Received \(fetched.count) product(s)")
             for p in fetched { print("   ✅ \(p.id) → \(p.displayPrice)") }
-            if fetched.isEmpty {
-                print("⚠️ [StoreKit] 0 products — StoreKit config not linked correctly")
-            }
+
+            let missing = ids.filter { id in !fetched.contains(where: { $0.id == id }) }
+            for id in missing { print("   ⚠️ Missing from StoreKit response: \(id)") }
+
             self.products = fetched.sorted {
                 let order = SensaroProduct.allCases.map(\.rawValue)
                 return (order.firstIndex(of: $0.id) ?? 99) < (order.firstIndex(of: $1.id) ?? 99)
             }
         } catch {
-            print("❌ [StoreKit] Load failed: \(error)")
-            purchaseState = .failed("StoreKit error: \(error.localizedDescription)")
+            print("❌ [StoreKit] loadProducts failed: \(error)")
+            // Don't set purchaseState.failed here — user hasn't tried to buy yet.
+            // Buttons will show fallback prices and surface error on tap.
         }
 
         await checkActiveSubscription()
@@ -104,20 +93,13 @@ final class StoreKitManager: ObservableObject {
 
     // MARK: - Purchase
     func purchase(_ sensaroProduct: SensaroProduct, idToken: String) async {
-        if debugBypassStoreKit {
-            // Simulate a successful purchase in debug mode
-            purchaseState = .purchasing
-            try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5s fake delay
-            purchaseState = .success(
-                productID: sensaroProduct.rawValue,
-                creditsAdded: sensaroProduct.credits
-            )
-            return
-        }
-
         guard let product = products.first(where: { $0.id == sensaroProduct.rawValue }) else {
-            let ids = products.map(\.id).joined(separator: "\n")
-            //purchaseState = .failed("Product not found: \(sensaroProduct.rawValue)\n\nLoaded \(products.count) products:\n\(ids.isEmpty ? "none" : ids)")
+            // Surface a clear error instead of silently doing nothing
+            let loaded = products.isEmpty
+                ? "No products loaded. Check App Store Connect configuration and Paid Apps Agreement."
+                : "Product '\(sensaroProduct.rawValue)' not found. Loaded: \(products.map(\.id).joined(separator: ", "))"
+            print("❌ [StoreKit] Purchase guard failed — \(loaded)")
+            purchaseState = .failed(loaded)
             return
         }
         await purchaseProduct(product, idToken: idToken)
@@ -137,7 +119,7 @@ final class StoreKitManager: ObservableObject {
             case .pending:
                 purchaseState = .idle
             @unknown default:
-                purchaseState = .failed("Unknown result.")
+                purchaseState = .failed("Unknown purchase result. Please try again.")
             }
         } catch {
             purchaseState = .failed(error.localizedDescription)
@@ -198,7 +180,7 @@ final class StoreKitManager: ObservableObject {
             request.httpBody = try JSONSerialization.data(withJSONObject: payload)
             let (data, httpResponse) = try await URLSession.shared.data(for: request)
             guard let http = httpResponse as? HTTPURLResponse, http.statusCode == 200 else {
-                purchaseState = .failed("Lambda verification failed. Contact support with transaction ID: \(transaction.id)")
+                purchaseState = .failed("Verification failed. Contact support with transaction ID: \(transaction.id)")
                 return
             }
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -209,7 +191,7 @@ final class StoreKitManager: ObservableObject {
             )
             await checkActiveSubscription()
         } catch {
-            purchaseState = .failed("Network error: \(error.localizedDescription)")
+            purchaseState = .failed("Network error during verification: \(error.localizedDescription)")
         }
     }
 
@@ -225,9 +207,8 @@ final class StoreKitManager: ObservableObject {
         products.first { $0.id == sensaroProduct.rawValue }
     }
 
-    /// Returns StoreKit price if loaded, fallback hardcoded price if in debug mode or not loaded
     func formattedPrice(for sensaroProduct: SensaroProduct) -> String {
         if let product = product(for: sensaroProduct) { return product.displayPrice }
-        return sensaroProduct.fallbackPrice  // shows price even when StoreKit not configured
+        return sensaroProduct.fallbackPrice
     }
 }
