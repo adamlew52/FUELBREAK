@@ -664,14 +664,6 @@ extension AppCoordinator: WKScriptMessageHandler {
             break
         }
     }
-
-    private func respondWithLocationError(code: Int, message: String) {
-        let safeMsg = message.replacingOccurrences(of: "'", with: "\\'")
-        locationRequester?.evaluateJavaScript(
-            "window.__geo_fail(\(code), '\(safeMsg)');",
-            completionHandler: nil
-        )
-    }
 }
 
 
