@@ -7,41 +7,16 @@
   INFO.PLIST ADDITIONS — Sensaro iOS App
   ══════════════════════════════════════════════════════════════════
 
-  These three keys MUST be present in your Info.plist or iOS will
-  crash when the app tries to access camera, photos, or location.
-
-  HOW TO ADD THEM IN XCODE:
-    1. Click your project name in the left sidebar
-    2. Select your app Target → Info tab
-    3. Click the (+) at the end of any existing row
-    4. Type the key name exactly as shown below
-    5. Set Type to "String"
-    6. Paste the description text as the value
-
-  Or you can right-click Info.plist in the sidebar, choose
-  "Open As → Source Code", and paste the XML below inside
-  the root <dict> element.
+  Paste these keys inside the root <dict> of your Info.plist.
+  NSLocationAlwaysAndWhenInUseUsageDescription is now REQUIRED
+  because the app requests Always authorization when the user
+  enables "Background Fire Alerts".
   ══════════════════════════════════════════════════════════════════
 -->
 
 <plist version="1.0">
 <dict>
-    <<key>CFBundleIcons</key>
-    <dict>
-        <key>CFBundlePrimaryIcon</key>
-        <dict>
-            <key>CFBundleIconName</key>
-            <string>AppIcon</string>
-        </dict>
-    </dict>
-    <key>CFBundleIcons~ipad</key>
-    <dict>
-        <key>CFBundlePrimaryIcon</key>
-        <dict>
-            <key>CFBundleIconName</key>
-            <string>AppIcon</string>
-        </dict>
-    </dict>
+
     <!-- ── Camera ─────────────────────────────────────────────── -->
     <key>NSCameraUsageDescription</key>
     <string>Sensaro uses the camera to take and upload photos of forestry concerns (e.g., diseased trees, invasive species) or wildfire risks (e.g., dry brush). For example, photograph a high-risk area and upload it to notify local forestry services.</string>
@@ -50,14 +25,26 @@
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Sensaro needs photo library access to upload existing photos of forestry concerns.</string>
 
-    <!-- ── Location ───────────────────────────────────────────── -->
-    <!-- Required for background location -->
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Sensaro monitors your location in the background to alert you when you're near active wildfires or entering a fire danger zone.</string>
-
-    <!-- Shown when app is in foreground only -->
+    <!-- ── Location (foreground) ──────────────────────────────── -->
+    <!--
+        Shown for standard map and fire-danger lookups while the
+        app is open.
+    -->
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Sensaro uses your location to show real-time fire danger near you and pin forestry concern reports on the map.</string>
+    <string>Sensaro uses your location to show real-time wildfire danger near you and to accurately pin forestry concern reports on the map.</string>
+
+    <!-- ── Location (background / Always) ────────────────────── -->
+    <!--
+        Only requested when the user explicitly enables
+        "Background Fire Alerts" in the app.
+        Required for:
+          • Continuous location streaming to the live wildfire map
+          • Geofence monitoring that sends alerts when the user
+            enters or exits a fire danger zone, even when the
+            app is closed.
+    -->
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Allow Sensaro to monitor your location in the background so you receive alerts when you enter a wildfire danger zone, even when the app is closed. This is only used when you enable Background Fire Alerts.</string>
 
 </dict>
 </plist>

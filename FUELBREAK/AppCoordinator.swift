@@ -2,39 +2,66 @@ import SwiftUI
 import WebKit
 import CoreLocation
 import PhotosUI
-var storeKitManager: StoreKitManager?
 
+private let API_GATEWAY_URL = "https://y25m8puewi.execute-api.us-west-1.amazonaws.com/prod/fuelbreak-notify"
 
-/// ObservableObject so ContentView can hold it with @StateObject.
-/// Implements all the WKWebView delegate protocols and bridges
-/// camera, photo library, geolocation, JS dialogs, and APNs token
-/// injection to native iOS.
+// ─────────────────────────────────────────────────────────────────
+// MARK: – FireZone  (geofence region descriptor)
+// ─────────────────────────────────────────────────────────────────
+/// A fire danger zone received from the web layer or backend.
+/// The web page can call:
+///   window.webkit.messageHandlers.addFireZone.postMessage({
+///       id: "zone-123", lat: 37.5, lng: -119.2, radius: 5000
+///   })
+struct FireZone {
+    let id: String
+    let center: CLLocationCoordinate2D
+    let radius: CLLocationDistance   // metres – Apple caps regions at 100 m minimum
+}
 
+// ─────────────────────────────────────────────────────────────────
+// MARK: – AppCoordinator
+// ─────────────────────────────────────────────────────────────────
 final class AppCoordinator: NSObject, ObservableObject {
-    @Published var pendingTarget: (tab: String, elementId: String)? = nil
 
-    // ── Paywall ──────────────────────────────────────────────────
-    /// Set to true to present the native StoreKit paywall.
-    /// The idToken is extracted from WebKit localStorage so StoreKitManager
-    /// can authenticate purchases against your Lambda.
+    // ── UI state ─────────────────────────────────────────────────
+    @Published var pendingTarget: (tab: String, elementId: String)? = nil
     @Published var showPaywall: Bool = false
     @Published var paywallIdToken: String = ""
+
+    /// Drives the "Background Fire Alerts" toggle in the Account tab
+    /// and any in-app settings UI.
+    @Published var backgroundAlertsEnabled: Bool = false {
+        didSet { backgroundAlertsEnabled ? enableBackgroundAlerts() : disableBackgroundAlerts() }
+    }
+
+    // ── Dependencies ─────────────────────────────────────────────
     var storeKitManager: StoreKitManager?
 
-    // ── Active WebViews ──────────────────────────────────────────
+    // ── WebViews ─────────────────────────────────────────────────
     private var webViews: [String: (view: WKWebView, url: URL)] = [:]
 
     // ── Location ─────────────────────────────────────────────────
     private let locationManager = CLLocationManager()
+
+    /// Holds the WKWebView that issued a foreground getCurrentPosition() call
+    /// so we can send the response back to the correct page.
     private weak var locationRequester: WKWebView?
 
-    // ── File upload completion handler ───────────────────────────
+    /// Whether we are streaming continuous location updates for the live map.
+    private var isStreamingLocation = false
+
+    // ── File upload ───────────────────────────────────────────────
     private var fileUploadCompletion: (([URL]?) -> Void)?
 
+    // ─────────────────────────────────────────────────────────────
     override init() {
         super.init()
+
         locationManager.delegate        = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        // Restore the toggle from the last session
+        backgroundAlertsEnabled = UserDefaults.standard.bool(forKey: "backgroundAlertsEnabled")
 
         NotificationCenter.default.addObserver(
             self,
@@ -44,30 +71,168 @@ final class AppCoordinator: NSObject, ObservableObject {
         )
     }
 
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
+    deinit { NotificationCenter.default.removeObserver(self) }
 
-    // ── APNs token injection ─────────────────────────────────────
-    @objc private func handleDeviceTokenReceived(_ notification: Notification) {
-        guard let token = notification.userInfo?["token"] as? String else { return }
-        injectToken(token)
-    }
+    // ─────────────────────────────────────────────────────────────
+    // MARK: – Background alert enable / disable
+    // ─────────────────────────────────────────────────────────────
 
-    private func injectToken(_ token: String) {
-        for (key, entry) in webViews {
-            let js = "window.__apns_device_token = '\(token)';"
-            entry.view.evaluateJavaScript(js) { _, error in
-                if let error = error {
-                    print("❌ [\(key)] token injection JS error: \(error.localizedDescription)")
-                } else {
-                    print("✅ [\(key)] APNs token updated in WebView")
-                }
+    /// Called when the user flips the "Background Fire Alerts" toggle ON.
+    /// Requests Always authorization (shown right here, tied to a clear
+    /// user action — exactly what Apple's review team wants to see).
+    private func enableBackgroundAlerts() {
+        UserDefaults.standard.set(true, forKey: "backgroundAlertsEnabled")
+
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            // Triggers the system "Allow Always" prompt
+            locationManager.requestAlwaysAuthorization()
+
+        case .authorizedWhenInUse:
+            // User previously granted WhenInUse — ask to upgrade to Always
+            locationManager.requestAlwaysAuthorization()
+
+        case .authorizedAlways:
+            startBackgroundServices()
+
+        case .denied, .restricted:
+            // Can't get permission — flip the toggle back and notify the web layer
+            DispatchQueue.main.async { [weak self] in
+                self?.backgroundAlertsEnabled = false
             }
+            broadcastAlertStatus(enabled: false, reason: "denied")
+
+        @unknown default: break
         }
     }
 
-    // ── WebView registration ─────────────────────────────────────
+    /// Called when the user flips the toggle OFF.
+    private func disableBackgroundAlerts() {
+        UserDefaults.standard.set(false, forKey: "backgroundAlertsEnabled")
+        stopBackgroundServices()
+        broadcastAlertStatus(enabled: false, reason: "disabled")
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // MARK: – Background location services
+    // ─────────────────────────────────────────────────────────────
+
+    /// Starts continuous background location updates AND re-registers
+    /// any geofence regions that were saved from the last session.
+    func startBackgroundServices() {
+        guard locationManager.authorizationStatus == .authorizedAlways else { return }
+
+        // ── Continuous tracking for the live wildfire map ─────────
+        locationManager.allowsBackgroundLocationUpdates  = true
+        locationManager.pausesLocationUpdatesAutomatically = false
+        locationManager.showsBackgroundLocationIndicator = true   // blue status-bar pill
+        locationManager.startUpdatingLocation()
+        isStreamingLocation = true
+
+        // ── Restore any persisted geofence zones ─────────────────
+        restorePersistedFireZones()
+
+        broadcastAlertStatus(enabled: true, reason: nil)
+        print("✅ [Location] Background services started")
+    }
+
+    func stopBackgroundServices() {
+        locationManager.stopUpdatingLocation()
+        locationManager.allowsBackgroundLocationUpdates   = false
+        locationManager.pausesLocationUpdatesAutomatically = true
+        isStreamingLocation = false
+
+        // Remove all monitored regions
+        for region in locationManager.monitoredRegions {
+            locationManager.stopMonitoring(for: region)
+        }
+        print("⏹ [Location] Background services stopped")
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // MARK: – Geofencing
+    // ─────────────────────────────────────────────────────────────
+
+    /// Add (or replace) a fire-danger geofence region.
+    /// Called from the JS bridge when the web layer sends a fire zone.
+    func addFireZone(_ zone: FireZone) {
+        guard locationManager.authorizationStatus == .authorizedAlways else {
+            print("⚠️ [Geofence] Always auth required to monitor regions")
+            return
+        }
+
+        // CLCircularRegion radius floor is 100 m; Apple silently clamps it.
+        let region = CLCircularRegion(
+            center:     zone.center,
+            radius:     max(zone.radius, 100),
+            identifier: zone.id
+        )
+        region.notifyOnEntry = true
+        region.notifyOnExit  = true
+        locationManager.startMonitoring(for: region)
+        persistFireZone(zone)
+        print("📍 [Geofence] Monitoring zone \(zone.id) r=\(zone.radius)m")
+    }
+
+    func removeFireZone(id: String) {
+        for region in locationManager.monitoredRegions where region.identifier == id {
+            locationManager.stopMonitoring(for: region)
+        }
+        removePersistedFireZone(id: id)
+    }
+
+    // ── Persist zones so they survive app restarts ────────────────
+    private func persistFireZone(_ zone: FireZone) {
+        var saved = UserDefaults.standard.array(forKey: "fireZones") as? [[String: Any]] ?? []
+        saved.removeAll { $0["id"] as? String == zone.id }
+        saved.append([
+            "id":     zone.id,
+            "lat":    zone.center.latitude,
+            "lng":    zone.center.longitude,
+            "radius": zone.radius
+        ])
+        UserDefaults.standard.set(saved, forKey: "fireZones")
+    }
+
+    private func removePersistedFireZone(id: String) {
+        var saved = UserDefaults.standard.array(forKey: "fireZones") as? [[String: Any]] ?? []
+        saved.removeAll { $0["id"] as? String == id }
+        UserDefaults.standard.set(saved, forKey: "fireZones")
+    }
+
+    private func restorePersistedFireZones() {
+        guard let saved = UserDefaults.standard.array(forKey: "fireZones") as? [[String: Any]] else { return }
+        for dict in saved {
+            guard
+                let id     = dict["id"]     as? String,
+                let lat    = dict["lat"]    as? Double,
+                let lng    = dict["lng"]    as? Double,
+                let radius = dict["radius"] as? Double
+            else { continue }
+            let zone = FireZone(
+                id:     id,
+                center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+                radius: radius
+            )
+            addFireZone(zone)
+        }
+        print("♻️ [Geofence] Restored \(saved.count) fire zone(s)")
+    }
+
+    // ── Tell the web layer about alert status changes ─────────────
+    private func broadcastAlertStatus(enabled: Bool, reason: String?) {
+        var payload = "{ enabled: \(enabled)"
+        if let r = reason { payload += ", reason: '\(r)'" }
+        payload += " }"
+        let js = "window.dispatchEvent(new CustomEvent('sensaro:alertStatusChanged', { detail: \(payload) }));"
+        for (_, entry) in webViews {
+            entry.view.evaluateJavaScript(js, completionHandler: nil)
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // MARK: – WebView registration
+    // ─────────────────────────────────────────────────────────────
     func register(webView: WKWebView, url: URL, key: String) {
         webViews[key] = (view: webView, url: url)
     }
@@ -86,48 +251,199 @@ final class AppCoordinator: NSObject, ObservableObject {
         webViews[tab]?.view.evaluateJavaScript(js, completionHandler: nil)
     }
 
-    // ── Paywall: extract idToken then present ────────────────────
-    /// Called when the WebView tries to navigate to any market/purchase URL.
-    /// Reads the Cognito id_token out of WebKit localStorage so that
-    /// StoreKitManager can send it to your Lambda for credit attribution.
-    private func presentPaywallFromWebView(_ webView: WKWebView) {
-        let extractTokenJS = """
+    // ─────────────────────────────────────────────────────────────
+    // MARK: – APNs token injection
+    // ─────────────────────────────────────────────────────────────
+    @objc private func handleDeviceTokenReceived(_ notification: Notification) {
+        guard let token = notification.userInfo?["token"] as? String else { return }
+        injectToken(token)
+    }
+
+    private func injectToken(_ token: String) {
+        for (key, entry) in webViews {
+            let js = "window.__apns_device_token = '\(token)';"
+            entry.view.evaluateJavaScript(js) { _, error in
+                if let error = error {
+                    print("❌ [\(key)] token injection error: \(error.localizedDescription)")
+                } else {
+                    print("✅ [\(key)] APNs token updated")
+                }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // MARK: – Paywall
+    // ─────────────────────────────────────────────────────────────
+    func presentPaywallFromWebView(_ webView: WKWebView) {
+        let js = """
         (function() {
-            try {
-                var t = localStorage.getItem('id_token');
-                return t || '';
-            } catch(e) { return ''; }
+            try { return localStorage.getItem('id_token') || ''; }
+            catch(e) { return ''; }
         })();
         """
-        webView.evaluateJavaScript(extractTokenJS) { [weak self] result, _ in
+        webView.evaluateJavaScript(js) { [weak self] result, _ in
             DispatchQueue.main.async {
                 let token = (result as? String) ?? ""
                 self?.paywallIdToken = token
                 self?.showPaywall = true
-
-                // Retry any purchases that failed to verify while offline
                 if !token.isEmpty, let skm = self?.storeKitManager {
                     Task { await skm.retryPendingVerifications(idToken: token) }
                 }
             }
         }
     }
-    /// Call this from your view hierarchy after a successful purchase so the
-    /// WebView's credit display refreshes without a full page reload.
+
     func notifyWebViewOfPurchase(creditsAdded: Int) {
         let js = """
         (function() {
-            // Dispatch a custom event that user_script.js or dashboard.js can listen to
             window.dispatchEvent(new CustomEvent('sensaro:creditsUpdated', {
                 detail: { creditsAdded: \(creditsAdded) }
             }));
-            // Also directly re-fetch user data if the page exposes uInit()
             if (typeof uInit === 'function') { uInit(); }
         })();
         """
         for (_, entry) in webViews {
             entry.view.evaluateJavaScript(js, completionHandler: nil)
         }
+    }
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// MARK: – CLLocationManagerDelegate
+// ─────────────────────────────────────────────────────────────────
+extension AppCoordinator: CLLocationManagerDelegate {
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+
+        case .authorizedAlways:
+            print("✅ [Location] Always authorized")
+            if backgroundAlertsEnabled { startBackgroundServices() }
+            // Also satisfy any pending foreground request
+            if locationRequester != nil { manager.requestLocation() }
+
+        case .authorizedWhenInUse:
+            print("ℹ️ [Location] WhenInUse authorized")
+            if locationRequester != nil { manager.requestLocation() }
+            // If the user only granted WhenInUse but the toggle is on,
+            // flip the toggle back — we can't run background alerts.
+            if backgroundAlertsEnabled {
+                DispatchQueue.main.async { [weak self] in
+                    self?.backgroundAlertsEnabled = false
+                }
+            }
+
+        case .denied, .restricted:
+            respondWithLocationError(code: 1, message: "Location permission denied.")
+            if backgroundAlertsEnabled {
+                DispatchQueue.main.async { [weak self] in
+                    self?.backgroundAlertsEnabled = false
+                }
+            }
+
+        default:
+            break
+        }
+    }
+
+    // ── Continuous updates (live map + background) ────────────────
+    func locationManager(_ manager: CLLocationManager,
+                         didUpdateLocations locations: [CLLocation]) {
+        guard let loc = locations.last else { return }
+
+        // Forward to the web page that asked for foreground position
+        if let requester = locationRequester {
+            let js = "window.__geo_respond(\(loc.coordinate.latitude), \(loc.coordinate.longitude), \(loc.horizontalAccuracy));"
+            requester.evaluateJavaScript(js, completionHandler: nil)
+            // Only nil it out if we're NOT streaming (i.e. one-shot foreground call)
+            if !isStreamingLocation { locationRequester = nil }
+        }
+
+        // Broadcast live position to all tabs (wildfire map etc.)
+        let broadcastJS = """
+        window.dispatchEvent(new CustomEvent('sensaro:locationUpdate', {
+            detail: {
+                lat:      \(loc.coordinate.latitude),
+                lng:      \(loc.coordinate.longitude),
+                accuracy: \(loc.horizontalAccuracy)
+            }
+        }));
+        """
+        for (_, entry) in webViews {
+            entry.view.evaluateJavaScript(broadcastJS, completionHandler: nil)
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager,
+                         didFailWithError error: Error) {
+        print("❌ [Location] \(error.localizedDescription)")
+        respondWithLocationError(code: 2, message: error.localizedDescription)
+    }
+
+    // ── Geofence entry / exit ─────────────────────────────────────
+    func locationManager(_ manager: CLLocationManager,
+                         didEnterRegion region: CLRegion) {
+        print("🔴 [Geofence] Entered \(region.identifier)")
+        sendFireZoneNotification(regionId: region.identifier, entered: true)
+        broadcastGeofenceEvent(regionId: region.identifier, entered: true)
+    }
+
+    func locationManager(_ manager: CLLocationManager,
+                         didExitRegion region: CLRegion) {
+        print("🟢 [Geofence] Exited \(region.identifier)")
+        sendFireZoneNotification(regionId: region.identifier, entered: false)
+        broadcastGeofenceEvent(regionId: region.identifier, entered: false)
+    }
+
+    func locationManager(_ manager: CLLocationManager,
+                         monitoringDidFailFor region: CLRegion?,
+                         withError error: Error) {
+        print("❌ [Geofence] Monitoring failed for \(region?.identifier ?? "unknown"): \(error.localizedDescription)")
+    }
+
+    // ── Local notification for geofence trigger ───────────────────
+    private func sendFireZoneNotification(regionId: String, entered: Bool) {
+        let content        = UNMutableNotificationContent()
+        content.title      = entered ? "⚠️ Fire Danger Zone" : "✅ Exited Fire Zone"
+        content.body       = entered
+            ? "You have entered a monitored wildfire danger area. Stay alert."
+            : "You have moved out of the fire danger zone."
+        content.sound      = .default
+        content.userInfo   = ["tab": "wildfire", "target": "panel-alerts", "zoneId": regionId]
+
+        let request = UNNotificationRequest(
+            identifier: "firezone-\(regionId)-\(entered ? "enter" : "exit")",
+            content:    content,
+            trigger:    nil   // deliver immediately
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ [Notification] \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Tell the web layer so it can update the map UI in real time.
+    private func broadcastGeofenceEvent(regionId: String, entered: Bool) {
+        let js = """
+        window.dispatchEvent(new CustomEvent('sensaro:geofenceEvent', {
+            detail: { zoneId: '\(regionId)', entered: \(entered) }
+        }));
+        """
+        for (_, entry) in webViews {
+            entry.view.evaluateJavaScript(js, completionHandler: nil)
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────
+    private func respondWithLocationError(code: Int, message: String) {
+        let safeMsg = message.replacingOccurrences(of: "'", with: "\\'")
+        locationRequester?.evaluateJavaScript(
+            "window.__geo_fail(\(code), '\(safeMsg)');",
+            completionHandler: nil
+        )
     }
 }
 
@@ -142,45 +458,29 @@ extension AppCoordinator: WKNavigationDelegate {
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
 
         if let url = navigationAction.request.url {
-            let urlString = url.absoluteString
-
-            // ── Intercept ALL market/purchase navigation ─────────
-            // Previously this opened Safari. Now it shows the native paywall.
-            // Catches:
-            //   sensaro.net/Mobile/market/purchase/...
-            //   sensaro.net/Mobile/market/index.html
-            //   sensaro.net/Mobile/market/ (any market path)
-            let isMarketURL = urlString.contains("sensaro.net/Mobile/market")
-                           || urlString.contains("/market/purchase")
-                           || urlString.contains("/market/index")
-
-            if isMarketURL {
-                // Extract the idToken from the webView that's navigating,
-                // then present the paywall natively.
+            let s = url.absoluteString
+            let isMarket = s.contains("sensaro.net/Mobile/market")
+                        || s.contains("/market/purchase")
+                        || s.contains("/market/index")
+            if isMarket {
                 presentPaywallFromWebView(webView)
-                decisionHandler(.cancel)    // block the web navigation
+                decisionHandler(.cancel)
                 return
             }
         }
-
         decisionHandler(.allow)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        let apnsToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
+        let token = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
+        guard !token.isEmpty else { return }
 
-        if !apnsToken.isEmpty {
-            let injectJS = "window.__apns_device_token = '\(apnsToken)';"
-            webView.evaluateJavaScript(injectJS) { _, error in
-                if let error = error {
-                    print("❌ [didFinish] token injection error: \(error.localizedDescription)")
-                } else {
-                    print("✅ [didFinish] APNs token injected after page load")
-                }
+        let injectJS = "window.__apns_device_token = '\(token)';"
+        webView.evaluateJavaScript(injectJS) { _, error in
+            if let error = error {
+                print("❌ [didFinish] token injection error: \(error.localizedDescription)")
             }
         }
-
-        guard !apnsToken.isEmpty else { return }
 
         let extractUserIdJS = """
         (function() {
@@ -190,24 +490,25 @@ extension AppCoordinator: WKNavigationDelegate {
                 var payload = JSON.parse(atob(idToken.split('.')[1]
                     .replace(/-/g, '+').replace(/_/g, '/')));
                 return payload.email || payload.sub || '';
-            } catch(e) {
-                return '';
-            }
+            } catch(e) { return ''; }
         })();
         """
-
-        webView.evaluateJavaScript(extractUserIdJS) { result, error in
-            guard
-                let userId = result as? String,
-                !userId.isEmpty
-            else {
-                print("⚠️ [didFinish] No logged-in session found in WebKit localStorage")
+        webView.evaluateJavaScript(extractUserIdJS) { [weak self] result, _ in
+            guard let userId = result as? String, !userId.isEmpty else {
+                print("⚠️ [didFinish] No session in localStorage")
                 return
             }
-
-            print("✅ [didFinish] Found session for \(userId) — registering token natively")
+            print("✅ [didFinish] Session for \(userId) — registering token")
             UserDefaults.standard.set(userId, forKey: "current_user_id")
-            APNSRegistration.send(token: apnsToken, userId: userId)
+            APNSRegistration.send(token: token, userId: userId)
+
+            // Sync the alert-toggle state into the web layer so the UI reflects reality
+            DispatchQueue.main.async {
+                self?.broadcastAlertStatus(
+                    enabled: self?.backgroundAlertsEnabled ?? false,
+                    reason:  nil
+                )
+            }
         }
     }
 
@@ -230,7 +531,7 @@ extension AppCoordinator: WKNavigationDelegate {
 
 
 // ─────────────────────────────────────────────────────────────────
-// MARK: – WKUIDelegate  (file picking + JS dialogs)
+// MARK: – WKUIDelegate
 // ─────────────────────────────────────────────────────────────────
 extension AppCoordinator: WKUIDelegate {
 
@@ -241,31 +542,18 @@ extension AppCoordinator: WKUIDelegate {
 
         self.fileUploadCompletion = completionHandler
 
-        let sheet = UIAlertController(title: "Add Photo",
-                                      message: nil,
-                                      preferredStyle: .actionSheet)
-        sheet.addAction(UIAlertAction(title: "Take Photo with Camera",
-                                      style: .default) { [weak self] _ in
-            self?.presentCamera()
-        })
-        sheet.addAction(UIAlertAction(title: "Choose from Library",
-                                      style: .default) { [weak self] _ in
-            self?.presentPhotoLibrary()
-        })
-        sheet.addAction(UIAlertAction(title: "Cancel",
-                                      style: .cancel) { [weak self] _ in
-            self?.fileUploadCompletion?(nil)
-            self?.fileUploadCompletion = nil
+        let sheet = UIAlertController(title: "Add Photo", message: nil, preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: "Take Photo",         style: .default) { [weak self] _ in self?.presentCamera() })
+        sheet.addAction(UIAlertAction(title: "Choose from Library",style: .default) { [weak self] _ in self?.presentPhotoLibrary() })
+        sheet.addAction(UIAlertAction(title: "Cancel",             style: .cancel)  { [weak self] _ in
+            self?.fileUploadCompletion?(nil); self?.fileUploadCompletion = nil
         })
 
-        if let popover = sheet.popoverPresentationController {
-            popover.sourceView = webView
-            popover.sourceRect = CGRect(x: webView.bounds.midX,
-                                        y: webView.bounds.midY,
-                                        width: 0, height: 0)
-            popover.permittedArrowDirections = []
+        if let pop = sheet.popoverPresentationController {
+            pop.sourceView = webView
+            pop.sourceRect = CGRect(x: webView.bounds.midX, y: webView.bounds.midY, width: 0, height: 0)
+            pop.permittedArrowDirections = []
         }
-
         topVC()?.present(sheet, animated: true)
     }
 
@@ -283,8 +571,8 @@ extension AppCoordinator: WKUIDelegate {
                  initiatedByFrame _: WKFrameInfo,
                  completionHandler: @escaping (Bool) -> Void) {
         let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in completionHandler(false) })
-        alert.addAction(UIAlertAction(title: "OK",     style: .default) { _ in completionHandler(true) })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel)  { _ in completionHandler(false) })
+        alert.addAction(UIAlertAction(title: "OK",     style: .default) { _ in completionHandler(true)  })
         topVC()?.present(alert, animated: true)
     }
 }
@@ -298,85 +586,91 @@ extension AppCoordinator: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController,
                                didReceive message: WKScriptMessage) {
 
-        if message.name == "xcodelogdebug" {
+        switch message.name {
+
+        case "xcodelogdebug":
             print("🌐 [JS] \(message.body)")
-            return
-        }
 
-        // ── openPaywall: web JS can trigger the paywall directly ─
-        // Add this call to any web button as a fallback:
-        //   window.webkit.messageHandlers.openPaywall.postMessage({})
-        if message.name == "openPaywall" {
-            if let webView = message.webView {
-                presentPaywallFromWebView(webView)
-            }
-            return
-        }
+        case "openPaywall":
+            if let wv = message.webView { presentPaywallFromWebView(wv) }
 
-        if message.name == "setUserId", let userId = message.body as? String {
-            print("✅ [Native] userId received from WebView: \(userId)")
+        case "setUserId":
+            guard let userId = message.body as? String else { return }
+            print("✅ [Native] userId from WebView: \(userId)")
             UserDefaults.standard.set(userId, forKey: "current_user_id")
-
             let token = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
-            if token.isEmpty {
-                print("⚠️ [Native] No APNs token yet — registration deferred until token arrives")
-            } else {
-                print("🔄 [Native] Registering token for userId: \(userId)")
-                APNSRegistration.send(token: token, userId: userId)
+            if !token.isEmpty { APNSRegistration.send(token: token, userId: userId) }
+
+        // ── Web layer requests a one-shot foreground location ─────
+        case "locationRequest":
+            locationRequester = message.webView
+            switch locationManager.authorizationStatus {
+            case .notDetermined:
+                // Ask for WhenInUse for foreground use; Always is only
+                // requested when the user explicitly enables background alerts.
+                locationManager.requestWhenInUseAuthorization()
+            case .authorizedWhenInUse, .authorizedAlways:
+                if isStreamingLocation {
+                    // We already have a live location — respond immediately
+                    if let loc = locationManager.location {
+                        let js = "window.__geo_respond(\(loc.coordinate.latitude), \(loc.coordinate.longitude), \(loc.horizontalAccuracy));"
+                        locationRequester?.evaluateJavaScript(js, completionHandler: nil)
+                    }
+                } else {
+                    locationManager.requestLocation()
+                }
+            case .denied, .restricted:
+                respondWithLocationError(code: 1,
+                    message: "Location access denied. Enable it in Settings → Privacy → Location.")
+            @unknown default: break
             }
-            return
-        }
 
-        guard message.name == "locationRequest" else { return }
-        locationRequester = message.webView
+        // ── Web layer sends a fire zone for geofencing ────────────
+        // Call from JS:
+        //   window.webkit.messageHandlers.addFireZone.postMessage({
+        //       id: "zone-abc", lat: 37.5, lng: -119.2, radius: 5000
+        //   })
+        case "addFireZone":
+            guard
+                let dict   = message.body as? [String: Any],
+                let id     = dict["id"]     as? String,
+                let lat    = dict["lat"]    as? Double,
+                let lng    = dict["lng"]    as? Double,
+                let radius = dict["radius"] as? Double
+            else {
+                print("⚠️ [Geofence] addFireZone: bad payload")
+                return
+            }
+            let zone = FireZone(
+                id:     id,
+                center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+                radius: radius
+            )
+            addFireZone(zone)
 
-        switch locationManager.authorizationStatus {
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways:
-            locationManager.requestLocation()
-        case .denied, .restricted:
-            respondWithLocationError(code: 1,
-                message: "Location access denied. Enable it in Settings → Privacy → Location.")
-        @unknown default:
+        case "removeFireZone":
+            if let id = message.body as? String { removeFireZone(id: id) }
+
+        // ── Web layer toggles background alerts ───────────────────
+        // window.webkit.messageHandlers.setBackgroundAlerts.postMessage(true/false)
+        case "setBackgroundAlerts":
+            if let enabled = message.body as? Bool {
+                DispatchQueue.main.async { [weak self] in
+                    self?.backgroundAlertsEnabled = enabled
+                }
+            }
+
+        default:
             break
         }
     }
 
     private func respondWithLocationError(code: Int, message: String) {
         let safeMsg = message.replacingOccurrences(of: "'", with: "\\'")
-        locationRequester?.evaluateJavaScript("window.__geo_fail(\(code), '\(safeMsg)');",
-                                              completionHandler: nil)
-    }
-}
-
-
-// ─────────────────────────────────────────────────────────────────
-// MARK: – CLLocationManagerDelegate
-// ─────────────────────────────────────────────────────────────────
-extension AppCoordinator: CLLocationManagerDelegate {
-
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        switch manager.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-            if locationRequester != nil { manager.requestLocation() }
-        case .denied, .restricted:
-            respondWithLocationError(code: 1, message: "Location permission denied.")
-        default:
-            break
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager,
-                         didUpdateLocations locations: [CLLocation]) {
-        guard let loc = locations.last else { return }
-        let js = "window.__geo_respond(\(loc.coordinate.latitude), \(loc.coordinate.longitude), \(loc.horizontalAccuracy));"
-        locationRequester?.evaluateJavaScript(js, completionHandler: nil)
-    }
-
-    func locationManager(_ manager: CLLocationManager,
-                         didFailWithError error: Error) {
-        respondWithLocationError(code: 2, message: error.localizedDescription)
+        locationRequester?.evaluateJavaScript(
+            "window.__geo_fail(\(code), '\(safeMsg)');",
+            completionHandler: nil
+        )
     }
 }
 
@@ -385,11 +679,9 @@ extension AppCoordinator: CLLocationManagerDelegate {
 // MARK: – Camera
 // ─────────────────────────────────────────────────────────────────
 extension AppCoordinator {
-
     func presentCamera() {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            presentPhotoLibrary()
-            return
+            presentPhotoLibrary(); return
         }
         let picker = UIImagePickerController()
         picker.sourceType        = .camera
@@ -401,7 +693,6 @@ extension AppCoordinator {
 }
 
 extension AppCoordinator: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-
     func imagePickerController(_ picker: UIImagePickerController,
                                didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
         picker.dismiss(animated: true)
@@ -409,17 +700,15 @@ extension AppCoordinator: UIImagePickerControllerDelegate, UINavigationControlle
               let data  = image.jpegData(compressionQuality: 0.85) else {
             fileUploadCompletion?(nil); fileUploadCompletion = nil; return
         }
-        let tempURL = FileManager.default.temporaryDirectory
+        let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("sensaro_\(UUID().uuidString).jpg")
-        try? data.write(to: tempURL)
-        fileUploadCompletion?([tempURL])
-        fileUploadCompletion = nil
+        try? data.write(to: url)
+        fileUploadCompletion?([url]); fileUploadCompletion = nil
     }
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         picker.dismiss(animated: true)
-        fileUploadCompletion?(nil)
-        fileUploadCompletion = nil
+        fileUploadCompletion?(nil); fileUploadCompletion = nil
     }
 }
 
@@ -428,7 +717,6 @@ extension AppCoordinator: UIImagePickerControllerDelegate, UINavigationControlle
 // MARK: – Photo Library
 // ─────────────────────────────────────────────────────────────────
 extension AppCoordinator: PHPickerViewControllerDelegate {
-
     func presentPhotoLibrary() {
         var config            = PHPickerConfiguration(photoLibrary: .shared())
         config.filter         = .images
@@ -444,8 +732,7 @@ extension AppCoordinator: PHPickerViewControllerDelegate {
         guard let result = results.first else {
             fileUploadCompletion?(nil); fileUploadCompletion = nil; return
         }
-        result.itemProvider.loadFileRepresentation(forTypeIdentifier: "public.image") {
-            [weak self] url, _ in
+        result.itemProvider.loadFileRepresentation(forTypeIdentifier: "public.image") { [weak self] url, _ in
             guard let url else {
                 DispatchQueue.main.async { self?.fileUploadCompletion?(nil); self?.fileUploadCompletion = nil }
                 return
@@ -453,10 +740,7 @@ extension AppCoordinator: PHPickerViewControllerDelegate {
             let dest = FileManager.default.temporaryDirectory
                 .appendingPathComponent("sensaro_\(UUID().uuidString).\(url.pathExtension)")
             try? FileManager.default.copyItem(at: url, to: dest)
-            DispatchQueue.main.async {
-                self?.fileUploadCompletion?([dest])
-                self?.fileUploadCompletion = nil
-            }
+            DispatchQueue.main.async { self?.fileUploadCompletion?([dest]); self?.fileUploadCompletion = nil }
         }
     }
 }
@@ -466,10 +750,8 @@ extension AppCoordinator: PHPickerViewControllerDelegate {
 // MARK: – Helpers
 // ─────────────────────────────────────────────────────────────────
 private extension AppCoordinator {
-
     func topVC() -> UIViewController? {
-        guard let scene  = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene }).first,
+        guard let scene  = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
               let window = scene.windows.first(where: { $0.isKeyWindow })
         else { return nil }
         var vc = window.rootViewController

@@ -17,7 +17,17 @@ struct ForestryWebView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
+        // Foreground location bridge (getCurrentPosition)
         config.userContentController.add(context.coordinator, name: "locationRequest")
+
+        // Geofencing bridges — web layer can push fire zones natively
+        config.userContentController.add(context.coordinator, name: "addFireZone")
+        config.userContentController.add(context.coordinator, name: "removeFireZone")
+
+        // Background-alert toggle bridge
+        // e.g. window.webkit.messageHandlers.setBackgroundAlerts.postMessage(true)
+        config.userContentController.add(context.coordinator, name: "setBackgroundAlerts")
+
         config.userContentController.addUserScript(
             WKUserScript(source: locationBridgeJS,
                          injectionTime: .atDocumentStart,
@@ -31,15 +41,33 @@ struct ForestryWebView: UIViewRepresentable {
 
         // ── 2. APNs token bridge ──────────────────────────────────
         let savedToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
+        let alertsEnabled = UserDefaults.standard.bool(forKey: "backgroundAlertsEnabled")
         let tokenBridgeJS = """
         (function () {
-            window.__apns_device_token = "\(savedToken)";
-            window.__apns_api_url      = "\(API_GATEWAY_URL)";
+            window.__apns_device_token       = "\(savedToken)";
+            window.__apns_api_url            = "\(API_GATEWAY_URL)";
+            window.__background_alerts_enabled = \(alertsEnabled);
 
             window.fuelbreak = {
                 registerToken: function (userId) {
-                    console.log('[fuelbreak] registerToken called for userId: ' + userId);
+                    console.log('[fuelbreak] registerToken for userId: ' + userId);
                     window.webkit.messageHandlers.setUserId.postMessage(String(userId));
+                },
+
+                // Web UI can call this to toggle background fire alerts:
+                //   window.fuelbreak.setBackgroundAlerts(true)
+                setBackgroundAlerts: function(enabled) {
+                    window.webkit.messageHandlers.setBackgroundAlerts.postMessage(!!enabled);
+                },
+
+                // Register a fire danger zone for native geofencing:
+                //   window.fuelbreak.addFireZone({ id, lat, lng, radius })
+                addFireZone: function(zone) {
+                    window.webkit.messageHandlers.addFireZone.postMessage(zone);
+                },
+
+                removeFireZone: function(id) {
+                    window.webkit.messageHandlers.removeFireZone.postMessage(id);
                 }
             };
         })();
@@ -50,7 +78,7 @@ struct ForestryWebView: UIViewRepresentable {
                          forMainFrameOnly: false)
         )
 
-        // ── 3. JS console → Xcode console (debugging) ────────────
+        // ── 3. JS console → Xcode console ────────────────────────
         config.userContentController.add(context.coordinator, name: "xcodelogdebug")
         config.userContentController.addUserScript(
             WKUserScript(source: """
@@ -69,19 +97,14 @@ struct ForestryWebView: UIViewRepresentable {
         config.userContentController.add(context.coordinator, name: "setUserId")
 
         // ── 5. openPaywall handler ────────────────────────────────
-        // Lets any web page trigger the native paywall directly with:
-        //   window.webkit.messageHandlers.openPaywall.postMessage({})
-        // This is a fallback — the primary trigger is URL interception
-        // in AppCoordinator.decidePolicyFor(), which catches any navigation
-        // to sensaro.net/Mobile/market without needing web-side changes.
         config.userContentController.add(context.coordinator, name: "openPaywall")
 
         // ── Create and configure the WebView ─────────────────────
         let webView = WKWebView(frame: .zero, configuration: config)
-        webView.isOpaque = false
+        webView.isOpaque   = false
         webView.backgroundColor = UIColor(red: 0.0, green: 0.20, blue: 0.0, alpha: 1.0)
         webView.navigationDelegate = context.coordinator
-        webView.uiDelegate = context.coordinator
+        webView.uiDelegate         = context.coordinator
         webView.scrollView.contentInsetAdjustmentBehavior = .scrollableAxes
         webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         webView.scrollView.isScrollEnabled = true
@@ -97,13 +120,13 @@ struct ForestryWebView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
     // ── JS bridges ───────────────────────────────────────────────
+
+    /// Intercepts navigator.geolocation.getCurrentPosition and routes it
+    /// through the native CLLocationManager so iOS permission dialogs fire.
     private let locationBridgeJS = """
     (function () {
         window.__geo_success = null;
         window.__geo_error   = null;
-
-        const _orig = navigator.geolocation.getCurrentPosition
-            .bind(navigator.geolocation);
 
         navigator.geolocation.getCurrentPosition = function (success, error, opts) {
             window.__geo_success = success;
@@ -126,6 +149,7 @@ struct ForestryWebView: UIViewRepresentable {
                 timestamp: Date.now()
             });
         };
+
         window.__geo_fail = function (code, msg) {
             if (!window.__geo_error) return;
             window.__geo_error({ code: code, message: msg });
@@ -136,7 +160,11 @@ struct ForestryWebView: UIViewRepresentable {
     private let noZoomJS = """
     (function() {
         var m = document.querySelector('meta[name=viewport]');
-        if (!m) { m = document.createElement('meta'); m.name='viewport'; document.head.appendChild(m); }
+        if (!m) {
+            m = document.createElement('meta');
+            m.name = 'viewport';
+            document.head.appendChild(m);
+        }
         m.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
     })();
     """
