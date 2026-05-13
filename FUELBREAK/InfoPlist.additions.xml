@@ -51,17 +51,13 @@
     <string>Sensaro needs photo library access to upload existing photos of forestry concerns.</string>
 
     <!-- ── Location ───────────────────────────────────────────── -->
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Sensaro uses your location to accurately pin forestry concern reports on the map.</string>
-
-    <!--
-      Optional: allow background location updates if you ever
-      want to track movement while the app is backgrounded.
-      For now you most likely do NOT need this.
-
+    <!-- Required for background location -->
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>...</string>
-    -->
+    <string>Sensaro monitors your location in the background to alert you when you're near active wildfires or entering a fire danger zone.</string>
+
+    <!-- Shown when app is in foreground only -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Sensaro uses your location to show real-time fire danger near you and pin forestry concern reports on the map.</string>
 
 </dict>
 </plist>
