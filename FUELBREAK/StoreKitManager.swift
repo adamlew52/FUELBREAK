@@ -230,7 +230,7 @@ final class StoreKitManager: ObservableObject {
     // MARK: - Retry Pending Verifications
     func retryPendingVerifications(idToken: String) async {
         guard !idToken.isEmpty else { return }
-        var pending = UserDefaults.standard.stringArray(forKey: "pending_verifications") ?? []
+        let pending = UserDefaults.standard.stringArray(forKey: "pending_verifications") ?? []
         guard !pending.isEmpty else { return }
 
         var remaining: [String] = []
