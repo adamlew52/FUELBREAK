@@ -363,13 +363,33 @@ extension AppCoordinator: CLLocationManagerDelegate {
 
         // Broadcast live position to all tabs (wildfire map etc.)
         let broadcastJS = """
-        window.dispatchEvent(new CustomEvent('sensaro:locationUpdate', {
-            detail: {
-                lat:      \(loc.coordinate.latitude),
-                lng:      \(loc.coordinate.longitude),
-                accuracy: \(loc.horizontalAccuracy)
+        (function() {
+            var lat = \(loc.coordinate.latitude);
+            var lng = \(loc.coordinate.longitude);
+            var acc = \(loc.horizontalAccuracy);
+
+            // Always persist to localStorage so morning brief can seed from
+            // it on open, regardless of which panel is currently active.
+            try {
+                localStorage.setItem('sensaro_last_lat',      lat);
+                localStorage.setItem('sensaro_last_lng',      lng);
+                localStorage.setItem('sensaro_last_loc_ts',   Date.now());
+                localStorage.setItem('sensaro_last_accuracy', acc);
+            } catch(e) {}
+
+            // Dispatch event for any listening panels
+            window.dispatchEvent(new CustomEvent('sensaro:locationUpdate', {
+                detail: { lat: lat, lng: lng, accuracy: acc }
+            }));
+
+            // Also push directly to morning-briefing iframe
+            var iframe = document.getElementById('briefing-iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    type: 'mb-location', lat: lat, lng: lng, accuracy: acc
+                }, '*');
             }
-        }));
+        })();
         """
         for (_, entry) in webViews {
             entry.view.evaluateJavaScript(broadcastJS, completionHandler: nil)
@@ -501,6 +521,43 @@ extension AppCoordinator: WKNavigationDelegate {
             print("✅ [didFinish] Session for \(userId) — registering token")
             UserDefaults.standard.set(userId, forKey: "current_user_id")
             APNSRegistration.send(token: token, userId: userId)
+
+            // Push token into morning-briefing iframe via postMessage so it
+            // can reload briefing data after a session refresh without a full
+            // page reload. The iframe listens for { type: 'mb-token', token }.
+            DispatchQueue.main.async {
+                let mbJS = """
+                (function() {
+                    var iframe = document.getElementById('briefing-iframe');
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage(
+                            { type: 'mb-token', token: '\(token)' }, '*'
+                        );
+                    }
+                })();
+                """
+                webView.evaluateJavaScript(mbJS, completionHandler: nil)
+            }
+
+            // If we have a current location, push it to the briefing iframe immediately
+            DispatchQueue.main.async { [weak self] in
+                if let loc = self?.locationManager.location {
+                    let locJS = """
+                    (function() {
+                        var iframe = document.getElementById('briefing-iframe');
+                        if (iframe && iframe.contentWindow) {
+                            iframe.contentWindow.postMessage({
+                                type: 'mb-location',
+                                lat:  \(loc.coordinate.latitude),
+                                lng:  \(loc.coordinate.longitude),
+                                accuracy: \(loc.horizontalAccuracy)
+                            }, '*');
+                        }
+                    })();
+                    """
+                    webView.evaluateJavaScript(locJS, completionHandler: nil)
+                }
+            }
 
             // Sync the alert-toggle state into the web layer so the UI reflects reality
             DispatchQueue.main.async {
