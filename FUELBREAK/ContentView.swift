@@ -1,6 +1,6 @@
 import SwiftUI
 
-private let DASHBOARD_URL = "https://www.sensaro.net/Desktop/Forestry_Dashboard/dashboard.html"
+private let DASHBOARD_URL = "https://www.sensaro.net/Mobile/Forestry_Dashboard/dashboard.html"
 private let DASHBOARD_KEY = "dashboard"
 
 struct ContentView: View {
