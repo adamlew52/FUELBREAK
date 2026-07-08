@@ -97,6 +97,9 @@ struct ForestryWebView: UIViewRepresentable {
     })();
     """
 
+    // ── App version — update this with every App Store release ──────────────
+    static let APP_VERSION = "1.0.8"
+
     /// Exposes APNs token + fuelbreak bridge object to the web layer
     private static func tokenBridgeJS(token: String, apiURL: String, alertsEnabled: Bool) -> String {
         return """
@@ -104,6 +107,7 @@ struct ForestryWebView: UIViewRepresentable {
             window.__apns_device_token         = "\(token)";
             window.__apns_api_url              = "\(apiURL)";
             window.__background_alerts_enabled = \(alertsEnabled);
+            window.__app_version               = "\(APP_VERSION)";
             window.fuelbreak = {
                 registerToken: function (userId) {
                     window.webkit.messageHandlers.setUserId.postMessage(String(userId));
