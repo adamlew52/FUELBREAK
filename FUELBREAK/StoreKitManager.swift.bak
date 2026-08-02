@@ -164,18 +164,6 @@ final class StoreKitManager: ObservableObject {
     /// the max means neither is wrongly locked out.
     private func recomputeEntitlement() {
         entitledTier = max(localTier, serverTier)
-
-        // Persisted so ForestryWebView can inject `window.__sensaro_tier` at
-        // document start on the next load. Without this the dashboard paints
-        // its nav unlocked, then locks rows a moment later once /user-data
-        // answers — which reads as a glitch.
-        UserDefaults.standard.set(entitledTier.rawValue, forKey: "sensaro_tier")
-    }
-
-    /// Cached tier from the last session. Safe to read before StoreKit has
-    /// finished loading.
-    static var cachedTier: SensaroTier {
-        SensaroTier(rawValue: UserDefaults.standard.string(forKey: "sensaro_tier") ?? "") ?? .free
     }
 
     // MARK: - Gating

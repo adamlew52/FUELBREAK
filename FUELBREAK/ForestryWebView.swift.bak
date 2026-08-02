@@ -33,12 +33,10 @@ struct ForestryWebView: UIViewRepresentable {
                                       forMainFrameOnly: false))
 
         let savedToken = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
-        let cachedTier = StoreKitManager.cachedTier.rawValue
         let alertsEnabled = UserDefaults.standard.bool(forKey: "backgroundAlertsEnabled")
         uc.addUserScript(WKUserScript(source: Self.tokenBridgeJS(token: savedToken,
                                                                   apiURL: API_GATEWAY_URL,
-                                                                  alertsEnabled: alertsEnabled,
-                                                                  cachedTier: cachedTier),
+                                                                  alertsEnabled: alertsEnabled),
                                       injectionTime: .atDocumentStart,
                                       forMainFrameOnly: false))
 
@@ -103,18 +101,13 @@ struct ForestryWebView: UIViewRepresentable {
     static let APP_VERSION = "1.0.8"
 
     /// Exposes APNs token + fuelbreak bridge object to the web layer
-    private static func tokenBridgeJS(token: String, apiURL: String, alertsEnabled: Bool, cachedTier: String) -> String {
+    private static func tokenBridgeJS(token: String, apiURL: String, alertsEnabled: Bool) -> String {
         return """
         (function () {
             window.__apns_device_token         = "\(token)";
             window.__apns_api_url              = "\(apiURL)";
             window.__background_alerts_enabled = \(alertsEnabled);
             window.__app_version               = "\(APP_VERSION)";
-            // Last known entitlement, injected before first paint so the
-            // dashboard nav does not render unlocked and then lock rows a
-            // moment later once /user-data answers. entitlements.js treats
-            // this as authoritative and skips its own fetch.
-            window.__sensaro_tier              = "\(cachedTier)";
             window.fuelbreak = {
                 registerToken: function (userId) {
                     window.webkit.messageHandlers.setUserId.postMessage(String(userId));

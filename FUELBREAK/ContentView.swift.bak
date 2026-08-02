@@ -21,17 +21,13 @@ struct ContentView: View {
         }
 
         .sheet(isPresented: $coordinator.showPaywall) {
-            // The manager is passed in rather than created inside PaywallView,
-            // so the paywall, the coordinator, and the webview injection all
-            // read the same entitlement state.
             PaywallView(
-                store: storeKitManager,
                 idToken: coordinator.paywallIdToken,
-                onTierChanged: { tier in
-                    coordinator.notifyWebViewOfTier(tier)
-                },
-                lockedFeature: coordinator.paywallFeature
+                onPurchaseComplete: { creditsAdded in
+                    coordinator.notifyWebViewOfPurchase(creditsAdded: creditsAdded)
+                }
             )
+            .environmentObject(storeKitManager)
         }
 
         .onReceive(NotificationCenter.default.publisher(for: .navigateToTarget)) { notif in

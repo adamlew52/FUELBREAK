@@ -15,12 +15,7 @@ import StoreKit
 
 struct PaywallView: View {
 
-    /// The app's single StoreKitManager, owned by ContentView and shared with
-    /// AppCoordinator. This used to be a `@StateObject` created here, which
-    /// meant the paywall ran a *second* manager: it loaded products twice, and
-    /// the pending-sync retry the coordinator kicked off ran against an
-    /// instance the paywall could not see.
-    @ObservedObject var store: StoreKitManager
+    @StateObject private var store = StoreKitManager()
 
     let idToken: String
 
@@ -533,4 +528,4 @@ private struct SectionLabel: View {
 }
 
 
-#Preview { PaywallView(store: StoreKitManager(), idToken: "preview-token", lockedFeature: .areaRisk) }
+#Preview { PaywallView(idToken: "preview-token", lockedFeature: .areaRisk) }

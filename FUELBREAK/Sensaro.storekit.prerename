@@ -103,9 +103,9 @@
               "locale": "en_US"
             }
           ],
-          "productID": "net.sensaro.v2.gold.yearly",
+          "productID": "net.sensaro.sub.gold.yearly",
           "recurringSubscriptionPeriod": "P1Y",
-          "referenceName": "net.sensaro.v2.gold.yearly",
+          "referenceName": "net.sensaro.sub.gold.yearly",
           "subscriptionGroupID": "22065432",
           "type": "RecurringSubscription",
           "winbackOffers": []
@@ -125,9 +125,9 @@
               "locale": "en_US"
             }
           ],
-          "productID": "net.sensaro.v2.gold.monthly",
+          "productID": "net.sensaro.sub.gold.monthly",
           "recurringSubscriptionPeriod": "P1M",
-          "referenceName": "net.sensaro.v2.gold.monthly",
+          "referenceName": "net.sensaro.sub.gold.monthly",
           "subscriptionGroupID": "22065432",
           "type": "RecurringSubscription",
           "winbackOffers": []
@@ -147,9 +147,9 @@
               "locale": "en_US"
             }
           ],
-          "productID": "net.sensaro.v2.silver.yearly",
+          "productID": "net.sensaro.sub.silver.yearly",
           "recurringSubscriptionPeriod": "P1Y",
-          "referenceName": "net.sensaro.v2.silver.yearly",
+          "referenceName": "net.sensaro.sub.silver.yearly",
           "subscriptionGroupID": "22065432",
           "type": "RecurringSubscription",
           "winbackOffers": []
@@ -169,9 +169,9 @@
               "locale": "en_US"
             }
           ],
-          "productID": "net.sensaro.v2.silver.monthly",
+          "productID": "net.sensaro.sub.silver.monthly",
           "recurringSubscriptionPeriod": "P1M",
-          "referenceName": "net.sensaro.v2.silver.monthly",
+          "referenceName": "net.sensaro.sub.silver.monthly",
           "subscriptionGroupID": "22065432",
           "type": "RecurringSubscription",
           "winbackOffers": []
@@ -191,9 +191,9 @@
               "locale": "en_US"
             }
           ],
-          "productID": "net.sensaro.v2.bronze.yearly",
+          "productID": "net.sensaro.sub.bronze.yearly",
           "recurringSubscriptionPeriod": "P1Y",
-          "referenceName": "net.sensaro.v2.bronze.yearly",
+          "referenceName": "net.sensaro.sub.bronze.yearly",
           "subscriptionGroupID": "22065432",
           "type": "RecurringSubscription",
           "winbackOffers": []
@@ -213,9 +213,9 @@
               "locale": "en_US"
             }
           ],
-          "productID": "net.sensaro.v2.bronze.monthly",
+          "productID": "net.sensaro.sub.bronze.monthly",
           "recurringSubscriptionPeriod": "P1M",
-          "referenceName": "net.sensaro.v2.bronze.monthly",
+          "referenceName": "net.sensaro.sub.bronze.monthly",
           "subscriptionGroupID": "22065432",
           "type": "RecurringSubscription",
           "winbackOffers": []

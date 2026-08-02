@@ -28,9 +28,6 @@ final class AppCoordinator: NSObject, ObservableObject {
     @Published var pendingTarget: (tab: String, elementId: String)? = nil
     @Published var showPaywall: Bool = false
     @Published var paywallIdToken: String = ""
-    /// Set when the web layer opens the paywall because a specific locked
-    /// panel was tapped, so the sheet can say what is being unlocked.
-    @Published var paywallFeature: SensaroFeature? = nil
 
     /// Drives the "Background Fire Alerts" toggle in the Account tab
     /// and any in-app settings UI.
@@ -302,7 +299,7 @@ final class AppCoordinator: NSObject, ObservableObject {
     // ─────────────────────────────────────────────────────────────
     // MARK: – Paywall
     // ─────────────────────────────────────────────────────────────
-    func presentPaywallFromWebView(_ webView: WKWebView, feature: SensaroFeature? = nil) {
+    func presentPaywallFromWebView(_ webView: WKWebView) {
         let js = """
         (function() {
             try { return localStorage.getItem('id_token') || ''; }
@@ -313,27 +310,19 @@ final class AppCoordinator: NSObject, ObservableObject {
             DispatchQueue.main.async {
                 let token = (result as? String) ?? ""
                 self?.paywallIdToken = token
-                self?.paywallFeature = feature
                 self?.showPaywall = true
                 if !token.isEmpty, let skm = self?.storeKitManager {
-                    Task {
-                        await skm.retryPendingSyncs(idToken: token)
-                        await skm.syncServerTier(idToken: token)
-                    }
+                    Task { await skm.retryPendingVerifications(idToken: token) }
                 }
             }
         }
     }
 
-    func notifyWebViewOfTier(_ tier: SensaroTier) {
+    func notifyWebViewOfPurchase(creditsAdded: Int) {
         let js = """
         (function() {
-            window.__sensaro_tier = '\(tier.rawValue)';
-            if (typeof window.sensaroSetTier === 'function') {
-                window.sensaroSetTier('\(tier.rawValue)');
-            }
-            window.dispatchEvent(new CustomEvent('sensaro:tier-changed', {
-                detail: { tier: '\(tier.rawValue)' }
+            window.dispatchEvent(new CustomEvent('sensaro:creditsUpdated', {
+                detail: { creditsAdded: \(creditsAdded) }
             }));
             if (typeof uInit === 'function') { uInit(); }
         })();
@@ -506,31 +495,7 @@ extension AppCoordinator: WKNavigationDelegate {
         decisionHandler(.allow)
     }
 
-    /// Mirrors the web session's ID token into UserDefaults.
-    ///
-    /// StoreKitManager needs a token outside of a paywall presentation — the
-    /// transaction listener fires on renewals and Ask-to-Buy approvals with no
-    /// UI on screen. It reads UserDefaults, but the token actually lives in the
-    /// webview's localStorage, so without this bridge every background sync
-    /// queued and never drained.
-    func syncSessionToken(from webView: WKWebView) {
-        let js = "(function(){try{return localStorage.getItem('id_token')||'';}catch(e){return '';}})();"
-        webView.evaluateJavaScript(js) { [weak self] result, _ in
-            let token = (result as? String) ?? ""
-            guard !token.isEmpty else { return }
-            UserDefaults.standard.set(token, forKey: "id_token")
-            guard let skm = self?.storeKitManager else { return }
-            Task {
-                await skm.retryPendingSyncs(idToken: token)
-                await skm.syncServerTier(idToken: token)
-                await MainActor.run { self?.notifyWebViewOfTier(skm.entitledTier) }
-            }
-        }
-    }
-
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        syncSessionToken(from: webView)
-
         let token = UserDefaults.standard.string(forKey: "apns_device_token") ?? ""
         guard !token.isEmpty else { return }
 
@@ -651,14 +616,7 @@ extension AppCoordinator: WKScriptMessageHandler {
             print("🌐 [JS] \(message.body)")
 
         case "openPaywall":
-            // Payload shape: { feature: "area-risk", tier: "silver" }.
-            // Older builds posted {} — feature stays nil and the paywall shows
-            // its generic header, which is the correct fallback.
-            let body = message.body as? [String: Any] ?? [:]
-            let feature = (body["feature"] as? String).flatMap(SensaroFeature.init(rawValue:))
-            if let wv = message.webView {
-                presentPaywallFromWebView(wv, feature: feature)
-            }
+            if let wv = message.webView { presentPaywallFromWebView(wv) }
 
         case "setUserId":
             guard let userId = message.body as? String else { return }

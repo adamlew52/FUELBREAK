@@ -1,0 +1,159 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "9983B72E",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "6766075100",
+      "localizations" : [
+        {
+          "description" : "50 one-time credits for wildfire risk assessments.",
+          "displayName" : "Pay-As-You-Go 50 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "net.sensaro.payg.50calls",
+      "referenceName" : "net.sensaro.payg.50calls",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6761627019",
+    "_developerTeamID" : "9HJ53KLL68",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 799514585.69845796,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "22065432",
+      "localizations" : [
+
+      ],
+      "name" : "FUELBREAK",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "7.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6766074836",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "100 credits per month to run wildfire risk assessments.",
+              "displayName" : "Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "net.sensaro.sub.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "net.sensaro.sub.monthly",
+          "subscriptionGroupID" : "22065432",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "97.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6766075031",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "1,500 credits per year to run wildfire risk assessments.",
+              "displayName" : "Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "net.sensaro.sub.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "net.sensaro.sub.yearly",
+          "subscriptionGroupID" : "22065432",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
